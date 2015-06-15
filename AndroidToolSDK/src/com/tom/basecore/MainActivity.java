@@ -1,4 +1,4 @@
-package com.tom.basetool;
+package com.tom.basecore;
 
 import android.app.Activity;
 import android.os.Bundle;
