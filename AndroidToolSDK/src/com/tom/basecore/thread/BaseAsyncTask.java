@@ -31,9 +31,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * User： yuanzeyao.
  * Date： 2015-07-08 15:45
  */
-public abstract class BaseAsyncTask<Params, Progress, Result>  {
-    public static final String TAG_="BaseAsyncTask";
-    public static final String THREAD_POOL_NAME="BaseAsyncTask";
+public abstract class BaseAsyncTask<Params, Progress, Result> {
+    public static final String TAG_ = "BaseAsyncTask";
+    public static final String THREAD_POOL_NAME = "BaseAsyncTask";
 
     //任务执行完毕
     private static final int MESSAGE_POST_RESULT = 0x1;
@@ -46,16 +46,16 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
     //对于无法中断的后台任务，需要自己设置一个CallableTask的子类，并实现cancel方法
     protected CallableTask mCallable;
     //该后台任务是否已经执行过
-    private final AtomicBoolean mInvoker=new AtomicBoolean();
+    private final AtomicBoolean mInvoker = new AtomicBoolean();
     //该后台任务是否已经被取消
     protected final AtomicBoolean mCancelled = new AtomicBoolean();
     //将消息分发到UI下线程处理
-    private static InnerHandler mHandler=new InnerHandler(Looper.getMainLooper());
+    private static InnerHandler mHandler = new InnerHandler(Looper.getMainLooper());
 
     /**
      * 创建一个异步任务，并指定异步任务在哪个线程池执行
-     * @param mPoolName
-     *          指定线程池的名称
+     *
+     * @param mPoolName 指定线程池的名称
      */
     public BaseAsyncTask(String mPoolName) {
         if (TextUtils.isEmpty(mPoolName)) {
@@ -68,8 +68,8 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
     /**
      * 任务执行前的回调方法
      * 注意：此回调在启动任务的线程中执行
-     * @return
-     *      如果返回true,则 {@link #doInBackground(Object[])}会被调用，否则不会调用
+     *
+     * @return 如果返回true, 则 {@link #doInBackground(Object[])}会被调用，否则不会调用
      */
     protected boolean onPreExecute() {
         return true;
@@ -77,27 +77,25 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
 
     /**
      * 在后台异步执行的回调
-     * @param params
-     *          异步任务需要使用的参数
-     * @return
-     *          返回执行结果
+     *
+     * @param params 异步任务需要使用的参数
+     * @return 返回执行结果
      */
     protected abstract Result doInBackground(Params[] params);
 
     /**
      * 用来通知UI线程进度
+     *
      * @param values
      */
-    protected final void publishProgress(Progress values)
-    {
-        if(!mCancelled.get())
-        {
-            mHandler.obtainMessage(MESSAGE_POST_PROGRESS,new AsyncTaskResult<Progress>(this,values)).sendToTarget();;
+    protected final void publishProgress(Progress values) {
+        if (!mCancelled.get()) {
+            mHandler.obtainMessage(MESSAGE_POST_PROGRESS, new AsyncTaskResult<Progress>(this, values)).sendToTarget();
+            ;
         }
     }
 
-    protected void onProgressUpdate(Progress values)
-    {
+    protected void onProgressUpdate(Progress values) {
 
     }
 
@@ -105,6 +103,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
     /**
      * 后台任务执行完毕后的回调
      * 注意：此回调在UI线程中执行
+     *
      * @param o
      */
     protected void onPostExecute(Result o) {
@@ -113,24 +112,25 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
 
     /**
      * 任务被取消的回调
+     *
      * @param mResult
      */
-    protected void onCancelled(Result mResult)
-    {
+    protected void onCancelled(Result mResult) {
 
     }
 
     /**
      * 判断当前任务是否已经取消
+     *
      * @return
      */
-    public boolean isCancelled()
-    {
-        return  mCancelled.get();
+    public boolean isCancelled() {
+        return mCancelled.get();
     }
 
     /**
      * 执行任务
+     *
      * @param params
      */
     public void execute(final Params... params) {
@@ -163,12 +163,12 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
 
     /**
      * 取消任务
+     *
      * @param mayInterruptIfRunning
      * @return
      */
     public final boolean cancel(boolean mayInterruptIfRunning) {
-        if(mFuture!=null)
-        {
+        if (mFuture != null) {
             mCancelled.set(true);
             return mFuture.cancel(mayInterruptIfRunning);
         }
@@ -176,29 +176,23 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
     }
 
 
+    public static class InnerHandler<Result> extends Handler {
 
-    public static class InnerHandler<Result> extends Handler
-    {
-
-        public InnerHandler(Looper looper)
-        {
+        public InnerHandler(Looper looper) {
             super(looper);
         }
 
         @Override
         public void handleMessage(Message msg) {
-            AsyncTaskResult result=(AsyncTaskResult)msg.obj;
-            switch(msg.what)
-            {
+            AsyncTaskResult result = (AsyncTaskResult) msg.obj;
+            switch (msg.what) {
                 case MESSAGE_POST_PROGRESS:
                     result.mTask.onProgressUpdate(result.mResult);
                     break;
                 case MESSAGE_POST_RESULT:
-                    if(result.mTask.mCancelled.get())
-                    {
+                    if (result.mTask.mCancelled.get()) {
                         result.mTask.onCancelled(result.mResult);
-                    }else
-                    {
+                    } else {
                         result.mTask.onPostExecute(result.mResult);
                     }
                     break;
@@ -208,47 +202,41 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
 
     /**
      * 异步任务返回结果的封装
+     *
      * @param <Data>
      */
-    private static class AsyncTaskResult<Data>
-    {
+    private static class AsyncTaskResult<Data> {
         public BaseAsyncTask mTask;
 
         public Data mResult;
 
-        public AsyncTaskResult(BaseAsyncTask mTask,Data mResult)
-        {
-            this.mTask=mTask;
-            this.mResult=mResult;
+        public AsyncTaskResult(BaseAsyncTask mTask, Data mResult) {
+            this.mTask = mTask;
+            this.mResult = mResult;
         }
     }
 
     /**
      *
      */
-    public class CallableTask implements Callable
-    {
+    public class CallableTask implements Callable {
         private Params[] params;
 
-        public final void setParams(Params[] params)
-        {
-            this.params=params;
+        public final void setParams(Params[] params) {
+            this.params = params;
         }
-        public void cancel()
-        {
+
+        public void cancel() {
 
         }
 
-        public final RunnableFuture<Result> newTask()
-        {
-            FutureTask<Result> mFutureTask=new FutureTask<Result>(this)
-            {
+        public final RunnableFuture<Result> newTask() {
+            FutureTask<Result> mFutureTask = new FutureTask<Result>(this) {
                 @Override
                 public boolean cancel(boolean mayInterruptIfRunning) {
-                    try
-                    {
+                    try {
                         CallableTask.this.cancel();
-                    }finally {
+                    } finally {
                         return super.cancel(mayInterruptIfRunning);
                     }
                 }
@@ -259,15 +247,13 @@ public abstract class BaseAsyncTask<Params, Progress, Result>  {
         @Override
         public final Object call() throws Exception {
             mInvoker.set(true);
-            Result mResult=null;
-            try
-            {
-                mResult= doInBackground(params);
-            }catch (Exception e)
-            {
+            Result mResult = null;
+            try {
+                mResult = doInBackground(params);
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-            mHandler.obtainMessage(MESSAGE_POST_RESULT,new AsyncTaskResult<Result>(BaseAsyncTask.this,mResult)).sendToTarget();
+            mHandler.obtainMessage(MESSAGE_POST_RESULT, new AsyncTaskResult<Result>(BaseAsyncTask.this, mResult)).sendToTarget();
             return mResult;
         }
     }
