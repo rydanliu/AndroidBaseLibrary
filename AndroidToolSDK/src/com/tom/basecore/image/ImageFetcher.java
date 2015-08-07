@@ -103,7 +103,7 @@ public class ImageFetcher extends ImageResizer {
             mHttpCacheDir.mkdirs();
         }
         synchronized (mHttpDiskCacheLock) {
-            if (ImageCache.getUsableSpace(mHttpCacheDir) > HTTP_CACHE_SIZE) {
+            if (AppUtils.getUsableSpace(mHttpCacheDir) > HTTP_CACHE_SIZE) {
                 try {
                     mHttpDiskCache = DiskLruCache.open(mHttpCacheDir, 1, 1, HTTP_CACHE_SIZE);
                     if (BuildConfig.DEBUG) {
