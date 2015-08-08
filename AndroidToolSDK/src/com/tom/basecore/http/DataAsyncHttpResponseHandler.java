@@ -103,6 +103,7 @@ public abstract class DataAsyncHttpResponseHandler extends AsyncHttpResponseHand
                         int l, count = 0;
                         // do not send messages if request has been cancelled
                         while ((l = instream.read(tmp)) != -1 && !Thread.currentThread().isInterrupted()) {
+                            count=count+l;
                             buffer.append(tmp, 0, l);
                             sendProgressDataMessage(copyOfRange(tmp, 0, l));
                             sendProgressMessage(count, contentLength);

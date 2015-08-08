@@ -54,7 +54,7 @@ import javax.xml.parsers.SAXParserFactory;
  *
  * @param <T> Handler extending {@link DefaultHandler}
  * @see DefaultHandler
- * @see com.loopj.android.http.AsyncHttpResponseHandler
+ * @see AsyncHttpResponseHandler
  */
 public abstract class SaxAsyncHttpResponseHandler<T extends DefaultHandler> extends AsyncHttpResponseHandler {
 

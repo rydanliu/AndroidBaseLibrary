@@ -16,6 +16,8 @@
 
 package com.tom.basecore.http;
 
+import com.tom.basecore.BuildConfig;
+
 import java.io.UnsupportedEncodingException;
 
 /**
