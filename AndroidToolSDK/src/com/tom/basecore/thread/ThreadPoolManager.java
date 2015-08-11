@@ -42,7 +42,7 @@ public class ThreadPoolManager {
         @Override
         public int compare(Runnable lhs, Runnable rhs) {
             if (lhs instanceof IPriorityInterface && rhs instanceof IPriorityInterface) {
-                return ((IPriorityInterface) lhs).getPriority() - ((IPriorityInterface) rhs).getPriority();
+                return ((IPriorityInterface) rhs).getPriority()-((IPriorityInterface) lhs).getPriority();
             }
             return 0;
         }
@@ -90,7 +90,7 @@ public class ThreadPoolManager {
         int numCores = AppUtils.getNumCores();
         BlockingQueue<Runnable> mPoolWorkQueue =
                 new BoundedPriorityBlockingQueue<Runnable>(numCores * task_queue_size, mCompartor);
-        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
