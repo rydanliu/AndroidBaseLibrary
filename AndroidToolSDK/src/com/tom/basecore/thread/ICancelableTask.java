@@ -8,7 +8,7 @@ import java.util.concurrent.RunnableFuture;
  * Date： 2015-08-10 14:40
  */
 public abstract class ICancelableTask<T> implements IPriorityInterface {
-    private int priority;
+    private int priority=Thread.NORM_PRIORITY;
 
     public abstract void cancel();
 

@@ -29,6 +29,8 @@ import android.widget.ImageView;
 
 import com.tom.basecore.BuildConfig;
 import com.tom.basecore.thread.BaseAsyncTask;
+import com.tom.basecore.thread.ThreadPoolManager;
+import com.tom.basecore.thread.XThreadPoolExecutor;
 import com.tom.basecore.utlis.OSVersionUtils;
 
 import java.lang.ref.WeakReference;
@@ -41,8 +43,7 @@ import java.lang.ref.WeakReference;
 public abstract class ImageWorker {
     private static final String TAG = "ImageWorker";
     private static final int FADE_IN_TIME = 200;
-    private static final String POOL_NAME="ImageWorker";
-
+    private XThreadPoolExecutor mExecutor= ThreadPoolManager.createCacheThreadPool();
     private ImageCache mImageCache;
     private Bitmap mLoadingBitmap;
     private boolean mFadeInBitmap = true;
@@ -87,7 +88,7 @@ public abstract class ImageWorker {
             final AsyncDrawable asyncDrawable =
                     new AsyncDrawable(mResources, mLoadingBitmap, task);
             imageView.setImageDrawable(asyncDrawable);
-            task.execute(data);
+            task.executeOnExecutor(mExecutor, data);
         }
     }
 
@@ -113,7 +114,7 @@ public abstract class ImageWorker {
      */
     public void addImageCache(ImageCache mImageCache) {
         this.mImageCache=mImageCache;
-        new CacheAsyncTask().execute(MESSAGE_INIT_DISK_CACHE);
+        new CacheAsyncTask().executeOnExecutor(mExecutor,MESSAGE_INIT_DISK_CACHE);
     }
 
     /**
@@ -222,7 +223,6 @@ public abstract class ImageWorker {
         private final WeakReference<ImageView> imageViewReference;
 
         public BitmapWorkerTask(ImageView imageView) {
-            super(POOL_NAME);
             imageViewReference = new WeakReference<ImageView>(imageView);
         }
 
@@ -404,7 +404,6 @@ public abstract class ImageWorker {
     protected class CacheAsyncTask extends BaseAsyncTask<Object, Void, Void> {
 
         public CacheAsyncTask() {
-            super(POOL_NAME);
         }
 
         @Override
@@ -453,14 +452,14 @@ public abstract class ImageWorker {
     }
 
     public void clearCache() {
-        new CacheAsyncTask().execute(MESSAGE_CLEAR);
+        new CacheAsyncTask().executeOnExecutor(mExecutor,MESSAGE_CLEAR);
     }
 
     public void flushCache() {
-        new CacheAsyncTask().execute(MESSAGE_FLUSH);
+        new CacheAsyncTask().executeOnExecutor(mExecutor,MESSAGE_FLUSH);
     }
 
     public void closeCache() {
-        new CacheAsyncTask().execute(MESSAGE_CLOSE);
+        new CacheAsyncTask().executeOnExecutor(mExecutor, MESSAGE_CLOSE);
     }
 }

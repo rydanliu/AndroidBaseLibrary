@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * Date： 2015-07-09 13:44
  */
 public class XThreadPoolExecutor extends ThreadPoolExecutor {
-    public static final String TAG="BaseAsyncTask";
+    public static final String TAG="XThreadPoolExecutor";
     public XThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
     }

@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class BaseAsyncTask<Params, Progress, Result> {
     public static final String TAG_ = "BaseAsyncTask";
-
     //任务执行完毕
     private static final int MESSAGE_POST_RESULT = 0x1;
     //跟新进度
@@ -46,7 +45,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
     protected final AtomicBoolean mCancelled = new AtomicBoolean();
     //将消息分发到UI下线程处理
     private static InnerHandler mHandler = new InnerHandler(Looper.getMainLooper());
-
+    //默认线程池
     private static XThreadPoolExecutor mExecutor= ThreadPoolManager.createPriorityAndDefaultThreadPool();
 
     /**

@@ -8,11 +8,12 @@ import java.util.concurrent.FutureTask;
  * User： yuanzeyao.
  * Date： 2015-08-10 14:24
  */
-public class PriorityFutureTask<T> extends FutureTask<T> implements IPriorityInterface {
+ class PriorityFutureTask<T> extends FutureTask<T> implements IPriorityInterface {
     private Callable<T> mCallable;
+
     public PriorityFutureTask(Callable<T> callable) {
         super(callable);
-        this.mCallable=callable;
+        this.mCallable = callable;
     }
 
     @Override

@@ -6,7 +6,6 @@ import com.tom.basecore.utlis.OSVersionUtils;
 import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -57,7 +56,7 @@ public class ThreadPoolManager {
     public static synchronized XThreadPoolExecutor createPriorityAndDefaultThreadPool() {
         int numCores = AppUtils.getNumCores();
         BlockingQueue<Runnable> mPoolWorkQueue =
-                new BoundedPriorityBlockingQueue<Runnable>(TASK_QUEUE_SIZE, mCompartor);
+                new BoundedPriorityBlockingQueue<Runnable>(numCores * TASK_QUEUE_SIZE, mCompartor);
 
         XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * CORE_POOL_SIZE, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
@@ -77,6 +76,7 @@ public class ThreadPoolManager {
 
     /**
      * 创建指定配置的线程池，此线程池支持快速中断和优先级排序
+     *
      * @param core_pool_size
      * @param max_pool_size
      * @param task_queue_size
@@ -89,7 +89,7 @@ public class ThreadPoolManager {
         }
         int numCores = AppUtils.getNumCores();
         BlockingQueue<Runnable> mPoolWorkQueue =
-                new BoundedPriorityBlockingQueue<Runnable>(task_queue_size,mCompartor);
+                new BoundedPriorityBlockingQueue<Runnable>(numCores * task_queue_size, mCompartor);
         XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
@@ -113,7 +113,7 @@ public class ThreadPoolManager {
      *
      * @return
      */
-    public static synchronized XThreadPoolExecutor createCacheThredPool() {
+    public static synchronized XThreadPoolExecutor createCacheThreadPool() {
         XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(0, Integer.MAX_VALUE,
                 60L, TimeUnit.SECONDS,
                 new SynchronousQueue<Runnable>(), new ThreadFactory() {
@@ -124,10 +124,6 @@ public class ThreadPoolManager {
                 return new Thread(r, "CacheThread#" + mCount.getAndIncrement());
             }
         });
-        if (OSVersionUtils.hasGingerbread()) {
-            //允许核心进程超时
-            mExecutor.allowCoreThreadTimeOut(true);
-        }
         return mExecutor;
     }
 
@@ -136,10 +132,15 @@ public class ThreadPoolManager {
      *
      * @return
      */
-    public static synchronized XThreadPoolExecutor createSingleThreadPool() {
-
+    public static synchronized XThreadPoolExecutor createSingleThreadPool(int task_queue_size) {
+        if (task_queue_size < 0) {
+            throw new IllegalArgumentException("task_queue_size need greator than zero!! ");
+        }
+        int numCores = AppUtils.getNumCores();
+        BlockingQueue<Runnable> mPoolWorkQueue =
+                new BoundedPriorityBlockingQueue<Runnable>(numCores * task_queue_size, mCompartor);
         XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(1, 1, 0L,
-                TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+                TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
             @Override
@@ -147,10 +148,6 @@ public class ThreadPoolManager {
                 return new Thread(r, "SingleThread#" + mCount.getAndIncrement());
             }
         });
-        if (OSVersionUtils.hasGingerbread()) {
-            //允许核心进程超时
-            mExecutor.allowCoreThreadTimeOut(true);
-        }
         return mExecutor;
     }
 
@@ -160,9 +157,15 @@ public class ThreadPoolManager {
      * @param core_pool_size
      * @return
      */
-    public static synchronized XThreadPoolExecutor getFixThreadPool(int core_pool_size) {
+    public static synchronized XThreadPoolExecutor createFixThreadPool(int core_pool_size, int task_queue_size) {
+        if (task_queue_size < 0 || core_pool_size < 0) {
+            throw new IllegalArgumentException("task_queue_size or core_pool_size need greator than zero!! ");
+        }
+        int numCores = AppUtils.getNumCores();
+        BlockingQueue<Runnable> mPoolWorkQueue =
+                new BoundedPriorityBlockingQueue<Runnable>(numCores * task_queue_size, mCompartor);
         XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(core_pool_size, core_pool_size, 0L,
-                TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+                TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
             @Override
@@ -170,11 +173,6 @@ public class ThreadPoolManager {
                 return new Thread(r, "FixThread#" + mCount.getAndIncrement());
             }
         });
-        if (OSVersionUtils.hasGingerbread()) {
-            //允许核心进程超时
-            mExecutor.allowCoreThreadTimeOut(true);
-        }
         return mExecutor;
     }
-
 }
