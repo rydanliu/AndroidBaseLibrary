@@ -1,10 +1,9 @@
 package com.tom.basecore.thread;
 
-import android.text.TextUtils;
-
 import com.tom.basecore.utlis.AppUtils;
+import com.tom.basecore.utlis.OSVersionUtils;
 
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -15,168 +14,167 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Description:管理所有的线程池
- * 根据不同线程池的名称管理不同的线程池
- * 默认线程池的核心线程有5*处理器核数
- * 默认最大线程数50*处理器核数
- * 等待队列长度为10
- * 所以当线程池中加入的任务数超过 50*处理器核数+10时，就无法添加任务，会抛出RejectedExecutionException异常
+ * Description:创建线程池的工具类，此类创建的线程池都是基于{@link XThreadPoolExecutor}
+ * <pre>
+ *     1、通过此类创建的线程池支持任务的优先级和支持任务快速中断
+ *     2、默认线程池核心线程有{@link #CORE_POOL_SIZE}*处理器核数 个，最大线程数{@link #MAXIMUM_POOL_SIZE}*处理器核数，等待
+ *       队列的长度为{@link #TASK_QUEUE_SIZE}
+ *     3、核心线程运行超时 {@link ThreadPoolExecutor#allowCoreThreadTimeOut(boolean)}
+ *     4、当线程池中的任务超过{@link #MAXIMUM_POOL_SIZE}*处理器核数+{@link #TASK_QUEUE_SIZE}时,会移除优先级最低的任务
+ * </pre>
  * User： yuanzeyao.
  * Date： 2015-07-08 10:42
  */
 public class ThreadPoolManager {
 
-    public static final String TAG="ThreadPoolManager";
-
-    private static HashMap<String,ThreadPoolExecutor> mExecutors=new HashMap<String,ThreadPoolExecutor>();
+    public static final String TAG = "ThreadPoolManager";
 
     //线程池中核心进程数量
-    private static final int CORE_POOL_SIZE=3;
+    private static final int CORE_POOL_SIZE = 3;
     //线程池中最大进程数
-    private static final int MAXIMUM_POOL_SIZE=50;
+    private static final int MAXIMUM_POOL_SIZE = 50;
     //线程最大的闲置时间
-    private static final int KEEP_ALIVE=1;
-    //线程工厂
-    private static final ThreadFactory mThreadFactory = new ThreadFactory() {
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, "mThreadFactory#" + mCount.getAndIncrement());
-        }
-        private final AtomicInteger mCount = new AtomicInteger(1);
+    private static final int KEEP_ALIVE = 1;
+    //任务队列默认大小
+    private static final int TASK_QUEUE_SIZE = 20;
 
+    //任务优先级比较器
+    private static Comparator<Runnable> mCompartor = new Comparator<Runnable>() {
+        @Override
+        public int compare(Runnable lhs, Runnable rhs) {
+            if (lhs instanceof IPriorityInterface && rhs instanceof IPriorityInterface) {
+                return ((IPriorityInterface) lhs).getPriority() - ((IPriorityInterface) rhs).getPriority();
+            }
+            return 0;
+        }
     };
 
     /**
-     * 根据指定线程池的名称，拿到一个线程池
-     * 该线程池核心线程有5个，最大线程池
-     * @param pool_name
-     *          线程池的名称
+     * 创建默认配置的线程池，此线程池支持快速中断和优先级排序
+     *
      * @return
-     *          返回一个线程池
      */
-    public static synchronized ThreadPoolExecutor getThreadPool(String pool_name) {
-       return getThreadPool(pool_name,CORE_POOL_SIZE);
+    public static synchronized ThreadPoolExecutor createPriorityAndDefaultThreadPool() {
+        int numCores = AppUtils.getNumCores();
+        BlockingQueue<Runnable> mPoolWorkQueue =
+                new BoundedPriorityBlockingQueue<Runnable>(TASK_QUEUE_SIZE, mCompartor);
+
+        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * CORE_POOL_SIZE, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
+                TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
+            private final AtomicInteger mCount = new AtomicInteger(1);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "PriorityAndDefaultThread#" + mCount.getAndIncrement());
+            }
+        });
+        if (OSVersionUtils.hasGingerbread()) {
+            //允许核心进程超时
+            mExecutor.allowCoreThreadTimeOut(true);
+        }
+        return mExecutor;
     }
 
     /**
-     * 根据指定的线程池名称，拿到一个线程池
-     * @param pool_name
-     *        线程池的名称
+     * 创建指定配置的线程池，此线程池支持快速中断和优先级排序
      * @param core_pool_size
-     *        线程池中核心线程的大小
+     * @param max_pool_size
+     * @param task_queue_size
+     * @param keepAliveTime
      * @return
-     *        返回一个线程池
      */
-    public static synchronized ThreadPoolExecutor getThreadPool(String pool_name, int core_pool_size) throws IllegalStateException {
-        if(TextUtils.isEmpty(pool_name))
-        {
-            throw new IllegalStateException("pool_name can not be null!");
+    public static synchronized ThreadPoolExecutor createPriorityThreadPool(int core_pool_size, int max_pool_size, int task_queue_size, long keepAliveTime) {
+        if (core_pool_size < 0 || max_pool_size < 0 || task_queue_size < 0 || keepAliveTime < 0) {
+            throw new IllegalArgumentException("core_pool_size or max_pool_size or task_queue_size or keepAliveTime need greator than zero!! ");
         }
+        int numCores = AppUtils.getNumCores();
+        BlockingQueue<Runnable> mPoolWorkQueue =
+                new BoundedPriorityBlockingQueue<Runnable>(task_queue_size,mCompartor);
+        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
+                TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
+            private final AtomicInteger mCount = new AtomicInteger(1);
 
-        if(core_pool_size<=0)
-        {
-            core_pool_size=CORE_POOL_SIZE;
-        }
-        ThreadPoolExecutor mExecutor=mExecutors.get(pool_name);
-        if (mExecutor!=null) {
-            if(mExecutor.getCorePoolSize()!=core_pool_size)
-            {
-                mExecutor.setCorePoolSize(core_pool_size);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "PriorityThread#" + mCount.getAndIncrement());
             }
-            return mExecutors.get(pool_name);
-        } else {
-            int numCores = AppUtils.getNumCores();
-            BlockingQueue<Runnable> mPoolWorkQueue =
-                    new LinkedBlockingQueue<Runnable>(10);
-            mExecutor = new CancelableThreadPoolExecutor(numCores * core_pool_size, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
-                    TimeUnit.SECONDS, mPoolWorkQueue, mThreadFactory);
-            mExecutors.put(pool_name, mExecutor);
-            return mExecutor;
+        });
+
+        if (OSVersionUtils.hasGingerbread()) {
+            //允许核心进程超时
+            mExecutor.allowCoreThreadTimeOut(true);
         }
+        return mExecutor;
     }
+
 
     /**
      * 类似{@link Executors#newCachedThreadPool()}
-     * @param mPoolName
+     *
      * @return
      */
-    public static  synchronized ThreadPoolExecutor getCacheThredPool(String mPoolName)
-    {
-        if(TextUtils.isEmpty(mPoolName))
-        {
-            throw new IllegalStateException("pool_name can not be null!");
-        }
+    public static synchronized ThreadPoolExecutor createCacheThredPool() {
+        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(0, Integer.MAX_VALUE,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<Runnable>(), new ThreadFactory() {
+            private final AtomicInteger mCount = new AtomicInteger(1);
 
-        ThreadPoolExecutor mExecutor = mExecutors.get(mPoolName);
-        if(mExecutor==null)
-        {
-            mExecutor = new CancelableThreadPoolExecutor(0, Integer.MAX_VALUE,
-                    60L, TimeUnit.SECONDS,
-                    new SynchronousQueue<Runnable>(), mThreadFactory);
-            mExecutors.put(mPoolName, mExecutor);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "CacheThread#" + mCount.getAndIncrement());
+            }
+        });
+        if (OSVersionUtils.hasGingerbread()) {
+            //允许核心进程超时
+            mExecutor.allowCoreThreadTimeOut(true);
         }
         return mExecutor;
     }
 
     /**
      * 类似{@link Executors#newSingleThreadExecutor()}
-     * @param mPoolName
+     *
      * @return
      */
-    public static synchronized ThreadPoolExecutor getSingleThreadPool(String mPoolName)
-    {
-        if(TextUtils.isEmpty(mPoolName))
-        {
-            throw new IllegalStateException("pool_name can not be null!");
-        }
-        ThreadPoolExecutor mExecutor = mExecutors.get(mPoolName);
+    public static synchronized ThreadPoolExecutor createSingleThreadPool() {
 
-        if(mExecutor==null)
-        {
-            mExecutor = new CancelableThreadPoolExecutor(1, 1, 0L,
-                    TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), mThreadFactory);
-            mExecutors.put(mPoolName, mExecutor);
+        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(1, 1, 0L,
+                TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+            private final AtomicInteger mCount = new AtomicInteger(1);
+
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "SingleThread#" + mCount.getAndIncrement());
+            }
+        });
+        if (OSVersionUtils.hasGingerbread()) {
+            //允许核心进程超时
+            mExecutor.allowCoreThreadTimeOut(true);
         }
         return mExecutor;
     }
 
     /**
      * 类似{@link Executors#newFixedThreadPool(int)}
-     * @param mPoolName
+     *
      * @param core_pool_size
      * @return
      */
-    public static synchronized ThreadPoolExecutor getFixThreadPool(String mPoolName,int core_pool_size)
-    {
-        if(TextUtils.isEmpty(mPoolName))
-        {
-            throw new IllegalStateException("pool_name can not be null!");
-        }
-        ThreadPoolExecutor mExecutor = mExecutors.get(mPoolName);
+    public static synchronized ThreadPoolExecutor getFixThreadPool(int core_pool_size) {
+        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(core_pool_size, core_pool_size, 0L,
+                TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+            private final AtomicInteger mCount = new AtomicInteger(1);
 
-        if(mExecutor==null)
-        {
-            mExecutor = new CancelableThreadPoolExecutor(core_pool_size, core_pool_size, 0L,
-                    TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), mThreadFactory);
-            mExecutors.put(mPoolName, mExecutor);
+            @Override
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "FixThread#" + mCount.getAndIncrement());
+            }
+        });
+        if (OSVersionUtils.hasGingerbread()) {
+            //允许核心进程超时
+            mExecutor.allowCoreThreadTimeOut(true);
         }
         return mExecutor;
     }
-
-    /**
-     * 关闭所有的线程池
-     */
-    public static synchronized void shutDownNow()
-    {
-        for(ThreadPoolExecutor mExecutor :mExecutors.values())
-        {
-            if(mExecutor!=null)
-                mExecutor.shutdownNow();
-        }
-    }
-
-
-
-
 
 }

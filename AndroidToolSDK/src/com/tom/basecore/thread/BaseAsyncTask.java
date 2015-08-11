@@ -7,9 +7,7 @@ import android.text.TextUtils;
 
 import com.tom.basecore.utlis.LogUtil;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
-import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -217,9 +215,9 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
     }
 
     /**
-     *
+     *支持中断的任务
      */
-    public class CallableTask implements Callable {
+    public class CallableTask extends XCallableTask<Result> {
         private Params[] params;
 
         public final void setParams(Params[] params) {
@@ -230,22 +228,8 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
 
         }
 
-        public final RunnableFuture<Result> newTask() {
-            FutureTask<Result> mFutureTask = new FutureTask<Result>(this) {
-                @Override
-                public boolean cancel(boolean mayInterruptIfRunning) {
-                    try {
-                        CallableTask.this.cancel();
-                    } finally {
-                        return super.cancel(mayInterruptIfRunning);
-                    }
-                }
-            };
-            return mFutureTask;
-        }
-
         @Override
-        public final Object call() throws Exception {
+        public final Result call() throws Exception {
             mInvoker.set(true);
             Result mResult = null;
             try {
