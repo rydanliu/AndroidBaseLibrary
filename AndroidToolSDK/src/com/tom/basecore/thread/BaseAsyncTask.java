@@ -3,7 +3,6 @@ package com.tom.basecore.thread;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.text.TextUtils;
 
 import com.tom.basecore.utlis.LogUtil;
 
@@ -13,7 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Description:提供安全中断机制的异步任务
  * {@link #onPreExecute()} 此方法可能在UI线程，也可能在子线程，决定因素在于BaseAsyncTask是在哪个线程创建
- * {@link #doInBackground(Object[])} 在{@link #mPoolName}制定的线程池中运行
+ * {@link #doInBackground(Object[])} 在{@link #mExecutor} 或者
+ * 在{@link #executeOnExecutor(XThreadPoolExecutor, Object[])}指定的线程池中运行
  * {@link #onPostExecute(Object)} 在UI线程运行
  * <pre>
  *     1、该类使用方法类似系统自带AsyncTask,在构建BaseAsyncTask时，可以指定该
@@ -31,14 +31,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public abstract class BaseAsyncTask<Params, Progress, Result> {
     public static final String TAG_ = "BaseAsyncTask";
-    public static final String THREAD_POOL_NAME = "BaseAsyncTask";
 
     //任务执行完毕
     private static final int MESSAGE_POST_RESULT = 0x1;
     //跟新进度
     private static final int MESSAGE_POST_PROGRESS = 0x2;
-    //异步任务所在线程池的名称
-    public String mPoolName;
     //正在执行的FuturTask，主要用来取消任务
     private FutureTask<Result> mFuture;
     //对于无法中断的后台任务，需要自己设置一个CallableTask的子类，并实现cancel方法
@@ -50,18 +47,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
     //将消息分发到UI下线程处理
     private static InnerHandler mHandler = new InnerHandler(Looper.getMainLooper());
 
-    /**
-     * 创建一个异步任务，并指定异步任务在哪个线程池执行
-     *
-     * @param mPoolName 指定线程池的名称
-     */
-    public BaseAsyncTask(String mPoolName) {
-        if (TextUtils.isEmpty(mPoolName)) {
-            this.mPoolName = THREAD_POOL_NAME;
-        } else {
-            this.mPoolName = mPoolName;
-        }
-    }
+    private static XThreadPoolExecutor mExecutor= ThreadPoolManager.createPriorityAndDefaultThreadPool();
 
     /**
      * 任务执行前的回调方法
@@ -79,7 +65,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
      * @param params 异步任务需要使用的参数
      * @return 返回执行结果
      */
-    protected abstract Result doInBackground(Params[] params);
+    protected abstract Result doInBackground(Params... params);
 
     /**
      * 用来通知UI线程进度
@@ -132,6 +118,18 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
      * @param params
      */
     public void execute(final Params... params) {
+        executeOnExecutor(mExecutor,params);
+    }
+
+    /**
+     * 让任务在指定的线程池上运行
+     * @param executor
+     * @param params
+     */
+    public void executeOnExecutor(XThreadPoolExecutor executor, Params... params) {
+        if (executor == null) {
+            throw new NullPointerException("Cannot execute task: executor is null!");
+        }
         if (mInvoker.get()) {
             throw new IllegalStateException("Cannot execute task:"
                     + " the task has already been executed "
@@ -156,7 +154,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
             LogUtil.d(TAG_, "mCallable is not null,so is possible noninterruptable task!!");
         }
         mCallable.setParams(params);
-        mFuture = (FutureTask<Result>) ThreadPoolManager.getThreadPool(mPoolName).submit(mCallable);
+        mFuture = (FutureTask<Result>) executor.submit(mCallable);
     }
 
     /**

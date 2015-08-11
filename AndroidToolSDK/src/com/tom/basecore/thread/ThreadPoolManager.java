@@ -54,12 +54,12 @@ public class ThreadPoolManager {
      *
      * @return
      */
-    public static synchronized ThreadPoolExecutor createPriorityAndDefaultThreadPool() {
+    public static synchronized XThreadPoolExecutor createPriorityAndDefaultThreadPool() {
         int numCores = AppUtils.getNumCores();
         BlockingQueue<Runnable> mPoolWorkQueue =
                 new BoundedPriorityBlockingQueue<Runnable>(TASK_QUEUE_SIZE, mCompartor);
 
-        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * CORE_POOL_SIZE, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * CORE_POOL_SIZE, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
@@ -83,14 +83,14 @@ public class ThreadPoolManager {
      * @param keepAliveTime
      * @return
      */
-    public static synchronized ThreadPoolExecutor createPriorityThreadPool(int core_pool_size, int max_pool_size, int task_queue_size, long keepAliveTime) {
+    public static synchronized XThreadPoolExecutor createPriorityThreadPool(int core_pool_size, int max_pool_size, int task_queue_size, long keepAliveTime) {
         if (core_pool_size < 0 || max_pool_size < 0 || task_queue_size < 0 || keepAliveTime < 0) {
             throw new IllegalArgumentException("core_pool_size or max_pool_size or task_queue_size or keepAliveTime need greator than zero!! ");
         }
         int numCores = AppUtils.getNumCores();
         BlockingQueue<Runnable> mPoolWorkQueue =
                 new BoundedPriorityBlockingQueue<Runnable>(task_queue_size,mCompartor);
-        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
@@ -113,8 +113,8 @@ public class ThreadPoolManager {
      *
      * @return
      */
-    public static synchronized ThreadPoolExecutor createCacheThredPool() {
-        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(0, Integer.MAX_VALUE,
+    public static synchronized XThreadPoolExecutor createCacheThredPool() {
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(0, Integer.MAX_VALUE,
                 60L, TimeUnit.SECONDS,
                 new SynchronousQueue<Runnable>(), new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
@@ -136,9 +136,9 @@ public class ThreadPoolManager {
      *
      * @return
      */
-    public static synchronized ThreadPoolExecutor createSingleThreadPool() {
+    public static synchronized XThreadPoolExecutor createSingleThreadPool() {
 
-        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(1, 1, 0L,
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(1, 1, 0L,
                 TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
@@ -160,8 +160,8 @@ public class ThreadPoolManager {
      * @param core_pool_size
      * @return
      */
-    public static synchronized ThreadPoolExecutor getFixThreadPool(int core_pool_size) {
-        ThreadPoolExecutor mExecutor = new XThreadPoolExecutor(core_pool_size, core_pool_size, 0L,
+    public static synchronized XThreadPoolExecutor getFixThreadPool(int core_pool_size) {
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(core_pool_size, core_pool_size, 0L,
                 TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
