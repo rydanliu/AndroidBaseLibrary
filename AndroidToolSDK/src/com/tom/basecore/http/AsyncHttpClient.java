@@ -21,6 +21,9 @@ package com.tom.basecore.http;
 import android.content.Context;
 import android.os.Looper;
 
+import com.tom.basecore.thread.ThreadPoolManager;
+import com.tom.basecore.utlis.LogUtil;
+
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
@@ -83,7 +86,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.zip.GZIPInputStream;
 
 
@@ -124,7 +126,7 @@ public class AsyncHttpClient {
     public static final String ENCODING_GZIP = "gzip";
 
     public static final int DEFAULT_MAX_CONNECTIONS = 10;
-    public static final int DEFAULT_SOCKET_TIMEOUT = 10 * 1000;
+    public static final int DEFAULT_SOCKET_TIMEOUT = 3 * 1000;
     public static final int DEFAULT_MAX_RETRIES = 5;
     public static final int DEFAULT_RETRY_SLEEP_TIME_MILLIS = 1500;
     public static final int DEFAULT_SOCKET_BUFFER_SIZE = 8192;
@@ -135,9 +137,10 @@ public class AsyncHttpClient {
 
     private final DefaultHttpClient httpClient;
     private final HttpContext httpContext;
-    private ExecutorService threadPool;
+    private static ExecutorService threadPool=ThreadPoolManager.createPriorityAndDefaultThreadPool();
     private final Map<Context, List<RequestHandle>> requestMap;
     private final Map<String, String> clientHeaderMap;
+    private volatile int mPriority=6;
     private boolean isUrlEncodingEnabled = true;
 
     public static LogInterface log = new LogHandler();
@@ -240,7 +243,6 @@ public class AsyncHttpClient {
         ClientConnectionManager cm = createConnectionManager(schemeRegistry, httpParams);
         Utils.asserts(cm != null, "Custom implementation of #createConnectionManager(SchemeRegistry, BasicHttpParams) returned null");
 
-        threadPool = getDefaultThreadPool();
         requestMap = Collections.synchronizedMap(new WeakHashMap<Context, List<RequestHandle>>());
         clientHeaderMap = new HashMap<String, String>();
 
@@ -435,14 +437,6 @@ public class AsyncHttpClient {
         return threadPool;
     }
 
-    /**
-     * Get the default threading pool to be used for this HTTP client.
-     *
-     * @return The default threading pool to be used
-     */
-    protected ExecutorService getDefaultThreadPool() {
-        return Executors.newCachedThreadPool();
-    }
 
     /**
      * Provided so it is easier for developers to provide custom ThreadSafeClientConnManager implementation
@@ -619,6 +613,19 @@ public class AsyncHttpClient {
         final HttpHost proxy = new HttpHost(hostname, port);
         final HttpParams httpParams = this.httpClient.getParams();
         httpParams.setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
+    }
+
+    /**
+     * 为http请求设置优先级
+     * {@value Thread#NORM_PRIORITY} or {@value Thread#MIN_PRIORITY} or {@value Thread#MAX_PRIORITY}
+     * @param mPriority
+     */
+    public void setPriority(int mPriority) {
+        if (mPriority != Thread.NORM_PRIORITY && mPriority != Thread.MAX_PRIORITY && mPriority != Thread.MIN_PRIORITY) {
+            return;
+        }
+        LogUtil.d("yzy", "setPriority:" + mPriority);
+        this.mPriority = mPriority;
     }
 
     /**
@@ -1382,6 +1389,8 @@ public class AsyncHttpClient {
         responseHandler.setRequestURI(uriRequest.getURI());
 
         AsyncHttpRequest request = newAsyncHttpRequest(client, httpContext, uriRequest, contentType, responseHandler, context);
+        LogUtil.d("yzy","async:mPriority:"+mPriority);
+        request.setPriority(mPriority);
         threadPool.submit(request);
         RequestHandle requestHandle = new RequestHandle(request);
 

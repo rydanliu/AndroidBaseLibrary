@@ -214,7 +214,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
     /**
      *支持中断的任务
      */
-    public class CallableTask extends XCallableTask<Result> {
+    public class CallableTask extends XCallable<Result> {
         private Params[] params;
 
         public final void setParams(Params[] params) {

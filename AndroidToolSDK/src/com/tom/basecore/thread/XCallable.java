@@ -9,7 +9,7 @@ import java.util.concurrent.RunnableFuture;
  * User： yuanzeyao.
  * Date： 2015-08-10 14:11
  */
-public abstract class XCallableTask<T> extends ICancelableTask implements Callable<T>{
+public abstract class XCallable<T> extends CancelableCallable implements Callable<T>{
     @Override
     public RunnableFuture newTaskFor() {
         FutureTask<T> mFutureTask = new PriorityFutureTask<T>(this);
@@ -18,6 +18,6 @@ public abstract class XCallableTask<T> extends ICancelableTask implements Callab
 
     @Override
     public RunnableFuture newTaskFor(Object value) {
-        throw new UnsupportedOperationException("XRunnableTask is not support newTaskFor(Object value)!!");
+        throw new UnsupportedOperationException("XRunnable is not support newTaskFor(Object value)!!");
     }
 }

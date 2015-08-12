@@ -32,8 +32,8 @@ import java.util.concurrent.FutureTask;
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
         try {
-            if (mCallable != null && mCallable instanceof XCallableTask) {
-                ((XCallableTask) mCallable).cancel();
+            if (mCallable != null && mCallable instanceof XCallable) {
+                ((XCallable) mCallable).cancel();
             }
         } finally {
             return super.cancel(mayInterruptIfRunning);

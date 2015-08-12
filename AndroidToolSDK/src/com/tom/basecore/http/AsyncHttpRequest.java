@@ -18,6 +18,8 @@
 
 package com.tom.basecore.http;
 
+import com.tom.basecore.thread.XRunnable;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -32,7 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Internal class, representing the HttpRequest, done in asynchronous manner
  */
-public class AsyncHttpRequest implements Runnable {
+public class AsyncHttpRequest extends XRunnable {
     private final AbstractHttpClient client;
     private final HttpContext context;
     private final HttpUriRequest request;

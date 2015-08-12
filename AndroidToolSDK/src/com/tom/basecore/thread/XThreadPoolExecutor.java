@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Description:支持任务优先级和可及时中断任务的线程池
- * 注意：提交到线程池的Runnable或者Callable需要继承自{@link ICancelableTask}
+ * 注意：提交到线程池的Runnable或者Callable需要继承自{@link CancelableCallable}
  * User： yuanzeyao.
  * Date： 2015-07-09 13:44
  */
@@ -30,9 +30,9 @@ public class XThreadPoolExecutor extends ThreadPoolExecutor {
     @Override
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
 
-        if (callable instanceof ICancelableTask) {
-            LogUtil.d(TAG, "Callable->newTaskFor ICancelableTask!!");
-            return ((ICancelableTask) callable).newTaskFor();
+        if (callable instanceof CancelableCallable) {
+            LogUtil.d(TAG, "Callable->newTaskFor CancelableCallable!!");
+            return ((CancelableCallable) callable).newTaskFor();
         }
         LogUtil.d(TAG, "Runnable->newTaskFor normal!!");
         return super.newTaskFor(callable);
@@ -40,9 +40,9 @@ public class XThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
-        if (runnable instanceof ICancelableTask) {
-            LogUtil.d(TAG, "Runnable->newTaskFor ICancelableTask!!");
-            return ((ICancelableTask) runnable).newTaskFor(value);
+        if (runnable instanceof CancelableCallable) {
+            LogUtil.d(TAG, "Runnable->newTaskFor CancelableCallable!!");
+            return ((CancelableCallable) runnable).newTaskFor(value);
         }
         LogUtil.d(TAG, "Runnable->newTaskFor normal!!");
         return super.newTaskFor(runnable, value);
@@ -57,6 +57,6 @@ public class XThreadPoolExecutor extends ThreadPoolExecutor {
     @Override
     protected void afterExecute(Runnable r, Throwable t) {
         super.afterExecute(r, t);
-        LogUtil.d(TAG, "XThreadPoolExecutor->afterExecute !");
+        LogUtil.d(TAG, "XThreadPoolExecutor->afterExecute !" + ((PriorityFutureTask) r).getPriority());
     }
 }

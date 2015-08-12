@@ -1,6 +1,7 @@
 package com.tom.basecore.thread;
 
 import com.tom.basecore.utlis.AppUtils;
+import com.tom.basecore.utlis.LogUtil;
 import com.tom.basecore.utlis.OSVersionUtils;
 
 import java.util.Comparator;
@@ -42,8 +43,12 @@ public class ThreadPoolManager {
         @Override
         public int compare(Runnable lhs, Runnable rhs) {
             if (lhs instanceof IPriorityInterface && rhs instanceof IPriorityInterface) {
-                return ((IPriorityInterface) rhs).getPriority()-((IPriorityInterface) lhs).getPriority();
+
+                int result=((IPriorityInterface) rhs).getPriority()-((IPriorityInterface) lhs).getPriority();
+                LogUtil.d(TAG,"compare result:"+result);
+                return result;
             }
+            LogUtil.d(TAG,"compare:0");
             return 0;
         }
     };
@@ -66,7 +71,7 @@ public class ThreadPoolManager {
         BlockingQueue<Runnable> mPoolWorkQueue =
                 new BoundedPriorityBlockingQueue<Runnable>(numCores * TASK_QUEUE_SIZE, mCompartor);
 
-        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores * CORE_POOL_SIZE, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores*CORE_POOL_SIZE, numCores * MAXIMUM_POOL_SIZE, numCores * KEEP_ALIVE,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
@@ -98,7 +103,7 @@ public class ThreadPoolManager {
         int numCores = AppUtils.getNumCores();
         BlockingQueue<Runnable> mPoolWorkQueue =
                 new BoundedPriorityBlockingQueue<Runnable>(numCores * task_queue_size, mCompartor);
-        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
+        XThreadPoolExecutor mExecutor = new XThreadPoolExecutor(numCores*core_pool_size, numCores * max_pool_size, numCores * keepAliveTime,
                 TimeUnit.SECONDS, mPoolWorkQueue, new ThreadFactory() {
             private final AtomicInteger mCount = new AtomicInteger(1);
 
