@@ -5,6 +5,7 @@ import com.tom.basecore.utlis.LogUtil;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -20,6 +21,10 @@ public class XThreadPoolExecutor extends ThreadPoolExecutor {
     public static final String TAG="XThreadPoolExecutor";
     public XThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory) {
         super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory);
+    }
+
+    public XThreadPoolExecutor(int corePoolSize, int maximumPoolSize, long keepAliveTime, TimeUnit unit, BlockingQueue<Runnable> workQueue, ThreadFactory threadFactory,RejectedExecutionHandler handler) {
+        super(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue, threadFactory,handler);
     }
 
     @Override
@@ -43,5 +48,15 @@ public class XThreadPoolExecutor extends ThreadPoolExecutor {
         return super.newTaskFor(runnable, value);
     }
 
+    @Override
+    protected void beforeExecute(Thread t, Runnable r) {
+        super.beforeExecute(t, r);
+        LogUtil.d(TAG, "XThreadPoolExecutor->beforeExecute Thread Name:"+t.getName());
+    }
 
+    @Override
+    protected void afterExecute(Runnable r, Throwable t) {
+        super.afterExecute(r, t);
+        LogUtil.d(TAG, "XThreadPoolExecutor->afterExecute !");
+    }
 }

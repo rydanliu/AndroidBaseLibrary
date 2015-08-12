@@ -6,6 +6,7 @@ import com.tom.basecore.utlis.OSVersionUtils;
 import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -36,7 +37,6 @@ public class ThreadPoolManager {
     private static final int KEEP_ALIVE = 1;
     //任务队列默认大小
     private static final int TASK_QUEUE_SIZE = 20;
-
     //任务优先级比较器
     private static Comparator<Runnable> mCompartor = new Comparator<Runnable>() {
         @Override
@@ -48,9 +48,17 @@ public class ThreadPoolManager {
         }
     };
 
+    private static RejectedExecutionHandler mHandler=new RejectedExecutionHandler() {
+
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+            removeLowestPriorityTask(r,executor);
+        }
+    };
+
     /**
      * 创建默认配置的线程池，此线程池支持快速中断和优先级排序
-     *
+     *此线程池支持优先级排序
      * @return
      */
     public static synchronized XThreadPoolExecutor createPriorityAndDefaultThreadPool() {
@@ -66,7 +74,7 @@ public class ThreadPoolManager {
             public Thread newThread(Runnable r) {
                 return new Thread(r, "PriorityAndDefaultThread#" + mCount.getAndIncrement());
             }
-        });
+        },mHandler);
         if (OSVersionUtils.hasGingerbread()) {
             //允许核心进程超时
             mExecutor.allowCoreThreadTimeOut(true);
@@ -76,7 +84,7 @@ public class ThreadPoolManager {
 
     /**
      * 创建指定配置的线程池，此线程池支持快速中断和优先级排序
-     *
+     * 此线程池支持优先级排序
      * @param core_pool_size
      * @param max_pool_size
      * @param task_queue_size
@@ -98,7 +106,7 @@ public class ThreadPoolManager {
             public Thread newThread(Runnable r) {
                 return new Thread(r, "PriorityThread#" + mCount.getAndIncrement());
             }
-        });
+        },mHandler);
 
         if (OSVersionUtils.hasGingerbread()) {
             //允许核心进程超时
@@ -110,7 +118,7 @@ public class ThreadPoolManager {
 
     /**
      * 类似{@link Executors#newCachedThreadPool()}
-     *
+     * 此线程不支持优先级排序
      * @return
      */
     public static synchronized XThreadPoolExecutor createCacheThreadPool() {
@@ -129,7 +137,7 @@ public class ThreadPoolManager {
 
     /**
      * 类似{@link Executors#newSingleThreadExecutor()}
-     *
+     * 此线程池支持优先级排序
      * @return
      */
     public static synchronized XThreadPoolExecutor createSingleThreadPool(int task_queue_size) {
@@ -147,13 +155,13 @@ public class ThreadPoolManager {
             public Thread newThread(Runnable r) {
                 return new Thread(r, "SingleThread#" + mCount.getAndIncrement());
             }
-        });
+        },mHandler);
         return mExecutor;
     }
 
     /**
      * 类似{@link Executors#newFixedThreadPool(int)}
-     *
+     * 此线程池支持优先级排序
      * @param core_pool_size
      * @return
      */
@@ -172,7 +180,21 @@ public class ThreadPoolManager {
             public Thread newThread(Runnable r) {
                 return new Thread(r, "FixThread#" + mCount.getAndIncrement());
             }
-        });
+        },mHandler);
         return mExecutor;
+    }
+
+    /**
+     * 当线程池满时，移除最低优先级的任务
+     * @param r
+     * @param executor
+     */
+    private static void removeLowestPriorityTask(Runnable r, ThreadPoolExecutor executor) {
+        if (!executor.isShutdown()) {
+            BlockingQueue<Runnable> blockingQueue = executor.getQueue();
+            if (blockingQueue instanceof BoundedPriorityBlockingQueue && ((BoundedPriorityBlockingQueue) blockingQueue).removeMinPriority()) {
+                executor.execute(r);
+            }
+        }
     }
 }
