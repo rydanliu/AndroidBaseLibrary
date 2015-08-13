@@ -137,7 +137,10 @@ public class AsyncHttpClient {
 
     private final DefaultHttpClient httpClient;
     private final HttpContext httpContext;
-    private static ExecutorService threadPool=ThreadPoolManager.createPriorityAndDefaultThreadPool();
+    //默认线程池
+    private static final ExecutorService defaultThreadPool =ThreadPoolManager.createPriorityAndDefaultThreadPool();
+    //外部设置的线程池，如果设置了此线程池，那么异步请求会在此线程池上执行
+    private static ExecutorService privateThreadPool;
     private final Map<Context, List<RequestHandle>> requestMap;
     private final Map<String, String> clientHeaderMap;
     private volatile int mPriority=6;
@@ -424,7 +427,7 @@ public class AsyncHttpClient {
      *                   requests.
      */
     public void setThreadPool(ExecutorService threadPool) {
-        this.threadPool = threadPool;
+        this.privateThreadPool = threadPool;
     }
 
     /**
@@ -434,7 +437,8 @@ public class AsyncHttpClient {
      * @return current executor service used
      */
     public ExecutorService getThreadPool() {
-        return threadPool;
+
+        return privateThreadPool==null?defaultThreadPool:privateThreadPool;
     }
 
 
@@ -780,7 +784,7 @@ public class AsyncHttpClient {
                     cancelRequests(requestList, mayInterruptIfRunning);
                 }
             };
-            threadPool.submit(runnable);
+            defaultThreadPool.submit(runnable);
         } else {
             cancelRequests(requestList, mayInterruptIfRunning);
         }
@@ -1389,9 +1393,8 @@ public class AsyncHttpClient {
         responseHandler.setRequestURI(uriRequest.getURI());
 
         AsyncHttpRequest request = newAsyncHttpRequest(client, httpContext, uriRequest, contentType, responseHandler, context);
-        LogUtil.d("yzy","async:mPriority:"+mPriority);
         request.setPriority(mPriority);
-        threadPool.submit(request);
+        getThreadPool().submit(request);
         RequestHandle requestHandle = new RequestHandle(request);
 
         if (context != null) {

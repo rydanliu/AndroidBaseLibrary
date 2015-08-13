@@ -17,21 +17,19 @@ import org.apache.http.Header;
  * User： yuanzeyao.
  * Date： 2015-08-12 10:45
  */
-public abstract class BaseHttpTask {
+public abstract class BaseHttpRequest {
 
-    public static final String TAG = "BaseHttpTask";
-
-    public static final int TIME_OUT = 10 * 1000;//默认超时时间是10秒
+    public static final String TAG = "BaseHttpRequest";
 
     private AsyncHttpClient mHttpClient;
 
     private RequestHandle mRequestHandler;
 
-    public BaseHttpTask() {
+    public BaseHttpRequest() {
         mHttpClient = new AsyncHttpClient();
     }
 
-    public BaseHttpTask(XThreadPoolExecutor mExecutor) {
+    public BaseHttpRequest(XThreadPoolExecutor mExecutor) {
         mHttpClient = new AsyncHttpClient();
         if (mExecutor != null && !mExecutor.isShutdown()) {
             mHttpClient.setThreadPool(mExecutor);
@@ -90,7 +88,7 @@ public abstract class BaseHttpTask {
     }
 
     /**
-     * 主要用于{@link com.tom.basecore.httptask.BaseHttpTask.HTTP_METHOD#POST}
+     * 主要用于{@link BaseHttpRequest.HTTP_METHOD#POST}
      * 表明你发送的数据类型
      */
     protected String getContentType() {
@@ -117,17 +115,17 @@ public abstract class BaseHttpTask {
      * @return 返回false, 则表示网络请求停止，返回true,表示开始网络请求
      */
     protected boolean onPreExecute(AsyncHttpClient mHttpClient, Context mContext, Object... params) {
-        LogUtil.d(TAG, "BaseHttpTask onPreExecute");
+        LogUtil.d(TAG, "BaseHttpRequest onPreExecute");
         if (mHttpClient == null) {
             mHttpClient = new AsyncHttpClient();
         }
 
         if (TextUtils.isEmpty(getUrl(mContext, params))) {
-            throw new NullPointerException("BaseHttpTask getUrl can't return null!");
+            throw new NullPointerException("BaseHttpRequest getUrl can't return null!");
         }
 
         if (getMethod() == null) {
-            throw new NullPointerException("BaseHttpTask getMethod can't return null Object!");
+            throw new NullPointerException("BaseHttpRequest getMethod can't return null Object!");
         }
         //可以加一些更多的前置判断
         return true;
@@ -137,7 +135,7 @@ public abstract class BaseHttpTask {
 
         //进行网络请求前的准备工作
         if (!onPreExecute(mHttpClient, mContext, params)) {
-            LogUtil.d(TAG, "BaseHttpTask execute fail for onPreExecute return false!");
+            LogUtil.d(TAG, "BaseHttpRequest execute fail for onPreExecute return false!");
             return false;
         }
 
@@ -161,10 +159,18 @@ public abstract class BaseHttpTask {
 
     public void setPriority(int mPriority) {
         if (mHttpClient != null) {
-            LogUtil.d("yzy","BaseHttpTask set Priority:"+mPriority);
+            LogUtil.d("yzy","BaseHttpRequest set Priority:"+mPriority);
             mHttpClient.setPriority(mPriority);
         }
     }
+
+
+    public void release() {
+        if (mHttpClient != null) {
+            mHttpClient.getHttpClient().getConnectionManager().shutdown();
+        }
+    }
+
 
 
 }
