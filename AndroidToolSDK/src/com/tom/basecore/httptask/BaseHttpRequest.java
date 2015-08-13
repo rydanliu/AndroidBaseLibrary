@@ -5,15 +5,24 @@ import android.text.TextUtils;
 
 import com.tom.basecore.http.AsyncHttpClient;
 import com.tom.basecore.http.AsyncHttpResponseHandler;
+import com.tom.basecore.http.PersistentCookieStore;
 import com.tom.basecore.http.RequestHandle;
 import com.tom.basecore.http.RequestParams;
 import com.tom.basecore.thread.XThreadPoolExecutor;
 import com.tom.basecore.utlis.LogUtil;
 
 import org.apache.http.Header;
+import org.apache.http.client.CookieStore;
 
 /**
  * Description:所有http请求的基类
+ * <pre>
+ *     1、使用setXXX or enableXXX方法设置的属性，建议改写子类的{@link #onPreExecute(AsyncHttpClient, Context, Object...)}方法，并在此方法中调用setXXX
+ *        比如设置代理，设置优先级，设置CookieStore,设置是否可以缓存
+ *     2、对于所有的getXXX方法，会自动被调用，如果getXXX返回的数据不满足http请求，那么直接在子类中改写此方法，并返回需要的数据即可，如超时时间，请求参数等等
+ *     3、该异步请求默认使用的线程池是{@link AsyncHttpClient#defaultThreadPool},如果需要将http请求指定到其他线程池那么使用
+ *     {@link #BaseHttpRequest(XThreadPoolExecutor)}构造方法，并传入相应的线程池
+ * </pre>
  * User： yuanzeyao.
  * Date： 2015-08-12 10:45
  */
@@ -21,9 +30,13 @@ public abstract class BaseHttpRequest {
 
     public static final String TAG = "BaseHttpRequest";
 
+    public static final int MIN_TIME_OUT = 1000;//最小超时时间
+
     private AsyncHttpClient mHttpClient;
 
     private RequestHandle mRequestHandler;
+    //默认支持缓存
+    private boolean enableCache = true;
 
     public BaseHttpRequest() {
         mHttpClient = new AsyncHttpClient();
@@ -43,6 +56,16 @@ public abstract class BaseHttpRequest {
      */
     protected HTTP_METHOD getMethod() {
         return HTTP_METHOD.GET;
+    }
+
+    /**
+     * 如果要修改超时时间，在子类改写此方法，返回需要设置到超时时间
+     * 如果返回值小于1000，则设置无效
+     *
+     * @return
+     */
+    protected int getTimeOut() {
+        return 0;
     }
 
     protected abstract String getUrl(Context mContext, Object... params);
@@ -78,31 +101,12 @@ public abstract class BaseHttpRequest {
     }
 
     /**
-     * 如果要为http请求设置代理，那么返回代理字符串即可
-     * 注意：返回字符串格式：　"hostname:port"
-     *
-     * @return
-     */
-    protected String getProxy() {
-        return null;
-    }
-
-    /**
      * 主要用于{@link BaseHttpRequest.HTTP_METHOD#POST}
      * 表明你发送的数据类型
      */
     protected String getContentType() {
         return null;
     }
-
-    /**
-     * http请求方式
-     */
-    protected enum HTTP_METHOD {
-        GET,
-        POST
-    }
-
 
     /**
      * 在进行网络请求时，进行一些设置或者前置判断，可以在子类中改写此方法对httpClient
@@ -127,7 +131,14 @@ public abstract class BaseHttpRequest {
         if (getMethod() == null) {
             throw new NullPointerException("BaseHttpRequest getMethod can't return null Object!");
         }
-        //可以加一些更多的前置判断
+        //设置超时时间
+        if (getTimeOut() >= MIN_TIME_OUT) {
+            mHttpClient.setTimeout(getTimeOut());
+        }
+        //设置用户代理
+        if (TextUtils.isEmpty(getUserAgent())) {
+            mHttpClient.setUserAgent(getUserAgent());
+        }
         return true;
     }
 
@@ -153,24 +164,58 @@ public abstract class BaseHttpRequest {
      * @param mayInterruptIfRunning
      */
     public void cancel(final boolean mayInterruptIfRunning) {
-        if (mRequestHandler != null)
+        if (mRequestHandler != null) {
             mRequestHandler.cancel(mayInterruptIfRunning);
+            mRequestHandler = null;
+        }
     }
 
+    /**
+     * 设置http请求的优先级
+     *
+     * @param mPriority
+     */
     public void setPriority(int mPriority) {
         if (mHttpClient != null) {
-            LogUtil.d("yzy","BaseHttpRequest set Priority:"+mPriority);
             mHttpClient.setPriority(mPriority);
         }
     }
 
-
-    public void release() {
-        if (mHttpClient != null) {
-            mHttpClient.getHttpClient().getConnectionManager().shutdown();
-        }
+    /**
+     * 设置CookieStore，通常使用{@link PersistentCookieStore}
+     *
+     * @param cookieStore
+     */
+    public void setCookieStore(CookieStore cookieStore) {
+        if (mHttpClient != null)
+            mHttpClient.setCookieStore(cookieStore);
     }
 
+    /**
+     * 设置代理
+     *
+     * @param proxy 主机名  ip地址或者dns
+     * @param port  端口号
+     */
+    public void setProxy(String proxy, int port) {
+        if (mHttpClient != null)
+            mHttpClient.setProxy(proxy, port);
+    }
 
+    /**
+     * 该请求是否允许使用缓存
+     *
+     * @param enableCache
+     */
+    public void enableCache(boolean enableCache) {
+        this.enableCache = enableCache;
+    }
 
+    /**
+     * http请求方式
+     */
+    protected enum HTTP_METHOD {
+        GET,
+        POST
+    }
 }
