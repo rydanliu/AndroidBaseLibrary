@@ -143,7 +143,7 @@ public class AsyncHttpClient {
     private static ExecutorService privateThreadPool;
     private final Map<Context, List<RequestHandle>> requestMap;
     private final Map<String, String> clientHeaderMap;
-    private volatile int mPriority=6;
+    private volatile int mPriority=Thread.NORM_PRIORITY;
     private boolean isUrlEncodingEnabled = true;
 
     public static LogInterface log = new LogHandler();
