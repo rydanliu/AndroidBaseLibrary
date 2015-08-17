@@ -22,7 +22,6 @@ import android.content.Context;
 import android.os.Looper;
 
 import com.tom.basecore.thread.ThreadPoolManager;
-import com.tom.basecore.utlis.LogUtil;
 
 import org.apache.http.Header;
 import org.apache.http.HeaderElement;
@@ -143,7 +142,6 @@ public class AsyncHttpClient {
     private static ExecutorService privateThreadPool;
     private final Map<Context, List<RequestHandle>> requestMap;
     private final Map<String, String> clientHeaderMap;
-    private volatile int mPriority=Thread.NORM_PRIORITY;
     private boolean isUrlEncodingEnabled = true;
 
     public static LogInterface log = new LogHandler();
@@ -153,6 +151,10 @@ public class AsyncHttpClient {
      */
     public AsyncHttpClient() {
         this(false, 80, 443);
+    }
+
+    public AsyncHttpClient(boolean fixNoHttpResponseException ){
+        this(fixNoHttpResponseException,80,443);
     }
 
     /**
@@ -617,19 +619,6 @@ public class AsyncHttpClient {
         final HttpHost proxy = new HttpHost(hostname, port);
         final HttpParams httpParams = this.httpClient.getParams();
         httpParams.setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
-    }
-
-    /**
-     * 为http请求设置优先级
-     * {@value Thread#NORM_PRIORITY} or {@value Thread#MIN_PRIORITY} or {@value Thread#MAX_PRIORITY}
-     * @param mPriority
-     */
-    public void setPriority(int mPriority) {
-        if (mPriority != Thread.NORM_PRIORITY && mPriority != Thread.MAX_PRIORITY && mPriority != Thread.MIN_PRIORITY) {
-            return;
-        }
-        LogUtil.d("yzy", "setPriority:" + mPriority);
-        this.mPriority = mPriority;
     }
 
     /**
@@ -1393,7 +1382,6 @@ public class AsyncHttpClient {
         responseHandler.setRequestURI(uriRequest.getURI());
 
         AsyncHttpRequest request = newAsyncHttpRequest(client, httpContext, uriRequest, contentType, responseHandler, context);
-        request.setPriority(mPriority);
         getThreadPool().submit(request);
         RequestHandle requestHandle = new RequestHandle(request);
 
