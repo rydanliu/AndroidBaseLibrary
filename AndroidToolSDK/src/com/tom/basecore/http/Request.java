@@ -6,7 +6,7 @@ import android.text.TextUtils;
 import org.apache.http.Header;
 
 /**
- * Description:
+ * Description:所有http请求的基类
  * User： yuanzeyao.
  * Date： 2015-08-14 17:23
  */
