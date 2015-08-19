@@ -33,7 +33,7 @@ public class HttpManager {
     private static final int HTTP_CACHE_SIZE = 10 * 1024 * 1024; // 10MB
     //磁盘缓存是否已经初始化
     private boolean mHttpDiskCacheInit = false;
-
+    //单例
     private static class SingtonHolder {
         private static HttpManager mInstance=new HttpManager();
     }
