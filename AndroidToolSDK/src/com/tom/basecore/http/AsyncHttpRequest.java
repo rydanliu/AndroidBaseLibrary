@@ -128,7 +128,8 @@ public class AsyncHttpRequest extends XRunnable {
                                 headers[i++]=new BasicHeader(item.getKey(),item.getValue());
                             }
                         }
-                        responseHandler.sendSuccessMessage(HttpManager.STATUS_CODE_LOCAL,headers,entry.data);
+                        responseHandler.sendSuccessMessage(entry.isExpired()?HttpManager.STATUS_CODE_LOCAL_EXPIRED:HttpManager.STATUS_CODE_LOCAL
+                                ,headers,entry.data);
                         if(!entry.isExpired()){
                             return;
                         }else {

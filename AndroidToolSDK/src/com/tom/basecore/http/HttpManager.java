@@ -10,21 +10,28 @@ import java.io.File;
 
 /**
  * Description:用于管理所有的http请求
+ * <pre>
+ *     1、默认情况下，所有的http请求使用共同的{@link AsyncHttpClient}对象，除非
+ *     在{@link Request}中进行特殊的设置.如设置了重试次数等，具体见{@link Request#isBaseRequest()}
+ *     2、如果要启动http缓存功能，那么需要提前调用{@link #initHttpDiskCache(Context)}
+ *     3、
+ * </pre>
  * User： yuanzeyao.
  * Date： 2015-08-14 16:34
  */
 public class HttpManager {
     public static final String TAG="HttpManager";
     public static final int STATUS_CODE_LOCAL=-1;
+    public static final int STATUS_CODE_LOCAL_EXPIRED=-2;
     private AsyncHttpClient mHttpClient;
     private static final String mCacheDirName="http";
     //磁盘缓存目录
     private File mHttpCacheDir;
     //磁盘缓存
     private DiskBasedCache mHttpDiskCache;
-
+    //磁盘缓存默认大小
     private static final int HTTP_CACHE_SIZE = 10 * 1024 * 1024; // 10MB
-
+    //磁盘缓存是否已经初始化
     private boolean mHttpDiskCacheInit = false;
 
     private static class SingtonHolder {
