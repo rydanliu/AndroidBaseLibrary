@@ -4,7 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 
-import com.tom.basecore.utlis.LogUtil;
+import com.tom.basecore.utlis.DebugLog;
 
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -135,14 +135,14 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
                     + "(a task can be executed only once)");
         }
         if (!onPreExecute()) {
-            LogUtil.d(TAG_, "onPreExecute return false,so return!!");
+            DebugLog.d(TAG_, "onPreExecute return false,so return!!");
             if (mCancelled.get()) {
                 mHandler.obtainMessage(MESSAGE_POST_RESULT, new AsyncTaskResult<Result>(BaseAsyncTask.this, null)).sendToTarget();
             }
             return;
         }
         if (mCallable == null) {
-            LogUtil.d(TAG_, "mCallable is null,so is possible interruptable task!!");
+            DebugLog.d(TAG_, "mCallable is null,so is possible interruptable task!!");
             mCallable = new CallableTask() {
                 @Override
                 public void cancel() {
@@ -150,7 +150,7 @@ public abstract class BaseAsyncTask<Params, Progress, Result> {
                 }
             };
         } else {
-            LogUtil.d(TAG_, "mCallable is not null,so is possible noninterruptable task!!");
+            DebugLog.d(TAG_, "mCallable is not null,so is possible noninterruptable task!!");
         }
         mCallable.setParams(params);
         mFuture = (FutureTask<Result>) executor.submit(mCallable);

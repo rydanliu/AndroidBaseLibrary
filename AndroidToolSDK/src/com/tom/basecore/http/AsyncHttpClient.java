@@ -1357,7 +1357,7 @@ public class AsyncHttpClient {
      *                        HttpPost, HttpGet, HttpPut, etc.
      * @return RequestHandle of future request process
      */
-    protected RequestHandle sendRequest(DefaultHttpClient client, HttpContext httpContext, HttpUriRequest uriRequest, String contentType, ResponseHandlerInterface responseHandler, Context context) {
+    protected RequestHandle sendRequest(DefaultHttpClient client, HttpContext httpContext, HttpUriRequest uriRequest, String contentType, ResponseHandlerInterface responseHandler, Context context,Request<?> mRequset) {
         if (uriRequest == null) {
             throw new IllegalArgumentException("HttpUriRequest must not be null");
         }
@@ -1380,6 +1380,9 @@ public class AsyncHttpClient {
 
         responseHandler.setRequestHeaders(uriRequest.getAllHeaders());
         responseHandler.setRequestURI(uriRequest.getURI());
+        if(mRequset!=null){
+            responseHandler.setShouldCache(mRequset.shouldCache());
+        }
 
         AsyncHttpRequest request = newAsyncHttpRequest(client, httpContext, uriRequest, contentType, responseHandler, context);
         getThreadPool().submit(request);
@@ -1407,6 +1410,10 @@ public class AsyncHttpClient {
         }
 
         return requestHandle;
+    }
+
+    protected RequestHandle sendRequest(DefaultHttpClient client, HttpContext httpContext, HttpUriRequest uriRequest, String contentType, ResponseHandlerInterface responseHandler, Context context) {
+        return sendRequest(client, httpContext, uriRequest, contentType, responseHandler, context, null);
     }
 
     /**

@@ -96,6 +96,10 @@ public abstract class Request<T> {
         return this;
     }
 
+    public final boolean shouldCache() {
+        return mShouldCache;
+    }
+
     /**
      * 设置请求需要使用的参数
      * @param mParams

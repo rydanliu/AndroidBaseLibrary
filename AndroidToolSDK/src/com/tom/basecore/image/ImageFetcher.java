@@ -21,12 +21,11 @@ import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.tom.basecore.BuildConfig;
-import com.tom.basecore.R;
 import com.tom.basecore.utlis.AppUtils;
-import com.tom.basecore.utlis.LogUtil;
+import com.tom.basecore.utlis.DebugLog;
+import com.tom.basecore.utlis.FileUtils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -43,7 +42,7 @@ import java.net.URL;
      DisplayMetrics dm=this.getResources().getDisplayMetrics();
      ImageFetcher fetcher=new ImageFetcher(this,dm.widthPixels,dm.heightPixels);
      String cacheDir=this.getExternalCacheDir()+"/image";
-     LogUtil.d("yzy","cacheDir-->"+cacheDir);
+     DebugLog.d("yzy","cacheDir-->"+cacheDir);
      ImageCache.ImageCacheBuilder builder=new ImageCache.ImageCacheBuilder(this,cacheDir);
      //设置内存缓存大小，这里还可以设置更多的属性，如磁盘缓存等等
      builder.setMemCacheSizePercent(0.25f);
@@ -89,7 +88,7 @@ public class ImageFetcher extends ImageResizer {
 
     private void init(Context context) {
         checkConnection(context);
-        mHttpCacheDir = ImageCache.getDiskCacheDir(context, HTTP_CACHE_DIR);
+        mHttpCacheDir = AppUtils.getDiskCacheDir(context, HTTP_CACHE_DIR);
     }
 
     @Override
@@ -107,7 +106,7 @@ public class ImageFetcher extends ImageResizer {
                 try {
                     mHttpDiskCache = DiskLruCache.open(mHttpCacheDir, 1, 1, HTTP_CACHE_SIZE);
                     if (BuildConfig.DEBUG) {
-                        LogUtil.d(TAG, "HTTP cache initialized");
+                        DebugLog.d(TAG, "HTTP cache initialized");
                     }
                 } catch (IOException e) {
                     mHttpDiskCache = null;
@@ -146,7 +145,7 @@ public class ImageFetcher extends ImageResizer {
                 try {
                     mHttpDiskCache.flush();
                     if (BuildConfig.DEBUG) {
-                        LogUtil.d(TAG, "HTTP cache flushed");
+                        DebugLog.d(TAG, "HTTP cache flushed");
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "flush - " + e);
@@ -201,7 +200,7 @@ public class ImageFetcher extends ImageResizer {
             Log.d(TAG, "processBitmap - " + data);
         }
 
-        final String key = ImageCache.hashKeyForDisk(data);
+        final String key = FileUtils.hashKeyForDisk(data);
         FileDescriptor fileDescriptor = null;
         FileInputStream fileInputStream = null;
         DiskLruCache.Snapshot snapshot;
@@ -295,7 +294,7 @@ public class ImageFetcher extends ImageResizer {
             }
             return true;
         } catch (final IOException e) {
-            LogUtil.e(TAG, "Error in downloadBitmap - " + e);
+            DebugLog.e(TAG, "Error in downloadBitmap - " + e);
         } finally {
             if (urlConnection != null) {
                 urlConnection.disconnect();

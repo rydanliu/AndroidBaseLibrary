@@ -219,4 +219,18 @@ public class AppUtils {
             FileUtils.deleteFile(context.getExternalCacheDir());
         }
     }
+
+    /**
+     * 拿到一个磁盘目录，如果磁盘已经挂载或者有内置sd卡，则只用内置sd卡，否则使用 Internal cache dir
+     *
+     * @param context The context to use
+     * @param uniqueName A unique directory name to append to the cache dir
+     * @return The cache dir
+     */
+    public static File getDiskCacheDir(Context context, String uniqueName) {
+        final String cachePath= hasExternalStorage() || isExternalStorageRemovable()?
+                getExternalCacheDir(context).getPath():context.getCacheDir().getPath();
+
+        return new File(cachePath + File.separator + uniqueName);
+    }
 }

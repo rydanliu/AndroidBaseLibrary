@@ -1,7 +1,7 @@
 package com.tom.basecore.thread;
 
 
-import com.tom.basecore.utlis.LogUtil;
+import com.tom.basecore.utlis.DebugLog;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
@@ -31,32 +31,32 @@ public class XThreadPoolExecutor extends ThreadPoolExecutor {
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
 
         if (callable instanceof CancelableCallable) {
-            LogUtil.d(TAG, "Callable->newTaskFor CancelableCallable!!");
+            DebugLog.d(TAG, "Callable->newTaskFor CancelableCallable!!");
             return ((CancelableCallable) callable).newTaskFor();
         }
-        LogUtil.d(TAG, "Runnable->newTaskFor normal!!");
+        DebugLog.d(TAG, "Runnable->newTaskFor normal!!");
         return super.newTaskFor(callable);
     }
 
     @Override
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         if (runnable instanceof CancelableCallable) {
-            LogUtil.d(TAG, "Runnable->newTaskFor CancelableCallable!!");
+            DebugLog.d(TAG, "Runnable->newTaskFor CancelableCallable!!");
             return ((CancelableCallable) runnable).newTaskFor(value);
         }
-        LogUtil.d(TAG, "Runnable->newTaskFor normal!!");
+        DebugLog.d(TAG, "Runnable->newTaskFor normal!!");
         return super.newTaskFor(runnable, value);
     }
 
     @Override
     protected void beforeExecute(Thread t, Runnable r) {
         super.beforeExecute(t, r);
-        LogUtil.d(TAG, "XThreadPoolExecutor->beforeExecute Thread Name:"+t.getName());
+        DebugLog.d(TAG, "XThreadPoolExecutor->beforeExecute Thread Name:" + t.getName());
     }
 
     @Override
     protected void afterExecute(Runnable r, Throwable t) {
         super.afterExecute(r, t);
-        LogUtil.d(TAG, "XThreadPoolExecutor->afterExecute !" + ((PriorityFutureTask) r).getPriority());
+        DebugLog.d(TAG, "XThreadPoolExecutor->afterExecute !" + ((PriorityFutureTask) r).getPriority());
     }
 }

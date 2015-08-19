@@ -186,4 +186,9 @@ public interface ResponseHandlerInterface {
      * @return Object TAG or null if it's been garbage collected
      */
     Object getTag();
+
+    void setShouldCache(boolean shouldCache);
+
+    boolean getShouldCache();
+
 }

@@ -18,17 +18,25 @@
 
 package com.tom.basecore.http;
 
+import com.tom.basecore.http.cache.CacheEntry;
 import com.tom.basecore.thread.XRunnable;
+import com.tom.basecore.utlis.DebugLog;
+import com.tom.basecore.utlis.FileUtils;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.AbstractHttpClient;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HttpContext;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -105,6 +113,31 @@ public class AsyncHttpRequest extends XRunnable {
         }
 
         try {
+            //先从缓存中读取jiu
+            if(responseHandler.getShouldCache()){
+                String cacheKey= FileUtils.hashKeyForDisk(responseHandler.getRequestURI().toString());
+                if(HttpManager.getInstance().isDiskCacheCanUse()){
+                    CacheEntry entry=HttpManager.getInstance().getHttpDiskCache().get(cacheKey);
+                    if(entry!=null){
+                        DebugLog.d("yzy", "cache hit!");
+                        Header[] headers=null;
+                        if(entry.responseHeaders!=null && entry.responseHeaders.size()>0){
+                            headers=new BasicHeader[entry.responseHeaders.size()];
+                            int i=0;
+                            for(Map.Entry<String,String> item : entry.responseHeaders.entrySet()){
+                                headers[i++]=new BasicHeader(item.getKey(),item.getValue());
+                            }
+                        }
+                        responseHandler.sendSuccessMessage(HttpManager.STATUS_CODE_LOCAL,headers,entry.data);
+                        if(!entry.isExpired()){
+                            return;
+                        }else {
+                            DebugLog.d("yzy", "cache hit but expired!!");
+                        }
+
+                    }
+                }
+            }
             makeRequestWithRetries();
         } catch (IOException e) {
             if (!isCancelled()) {
@@ -255,5 +288,9 @@ public class AsyncHttpRequest extends XRunnable {
      */
     public Object getTag() {
         return this.responseHandler.getTag();
+    }
+
+    private void writeResultToDiskCache(InputStream is,OutputStream os){
+
     }
 }

@@ -1,12 +1,31 @@
 package com.tom.basecore.http;
 
+import android.content.Context;
+
+import com.tom.basecore.http.cache.DiskBasedCache;
+import com.tom.basecore.utlis.AppUtils;
+import com.tom.basecore.utlis.DebugLog;
+
+import java.io.File;
+
 /**
  * Description:用于管理所有的http请求
  * User： yuanzeyao.
  * Date： 2015-08-14 16:34
  */
 public class HttpManager {
+    public static final String TAG="HttpManager";
+    public static final int STATUS_CODE_LOCAL=-1;
     private AsyncHttpClient mHttpClient;
+    private static final String mCacheDirName="http";
+    //磁盘缓存目录
+    private File mHttpCacheDir;
+    //磁盘缓存
+    private DiskBasedCache mHttpDiskCache;
+
+    private static final int HTTP_CACHE_SIZE = 10 * 1024 * 1024; // 10MB
+
+    private boolean mHttpDiskCacheInit = false;
 
     private static class SingtonHolder {
         private static HttpManager mInstance=new HttpManager();
@@ -72,5 +91,40 @@ public class HttpManager {
         return mClient;
     }
 
+    public DiskBasedCache getHttpDiskCache(){
+        return mHttpDiskCache;
+    }
 
+    public boolean isDiskCacheCanUse(){
+        return mHttpDiskCache!=null && mHttpDiskCacheInit;
+    }
+
+    /**
+     * 初始化http请求的磁盘缓存
+     * @return
+     */
+    public void initHttpDiskCache(final Context mContext) {
+        new Thread(){
+            @Override
+            public void run() {
+                mHttpCacheDir = AppUtils.getDiskCacheDir(mContext, mCacheDirName);
+                if (!mHttpCacheDir.exists()) {
+                    mHttpCacheDir.mkdirs();
+                }
+                DebugLog.d(TAG, "initHttpDiskCache-->" + mHttpCacheDir.getAbsolutePath());
+                if (AppUtils.getUsableSpace(mHttpCacheDir) > HTTP_CACHE_SIZE) {
+                    try {
+                        mHttpDiskCache = new DiskBasedCache(mHttpCacheDir, HTTP_CACHE_SIZE);
+                        mHttpDiskCache.initialize();
+                        mHttpDiskCacheInit = true;
+                        DebugLog.d(TAG, "initHttpDiskCache cache has initialized");
+                    } catch (Exception e) {
+                        mHttpDiskCache = null;
+                    }
+                } else {
+                    DebugLog.d(TAG, "initHttpDiskCache-->no space" + AppUtils.getUsableSpace(mHttpCacheDir));
+                }
+            }
+        }.start();
+    }
 }

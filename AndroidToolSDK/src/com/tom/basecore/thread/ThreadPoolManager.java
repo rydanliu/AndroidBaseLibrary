@@ -1,7 +1,7 @@
 package com.tom.basecore.thread;
 
 import com.tom.basecore.utlis.AppUtils;
-import com.tom.basecore.utlis.LogUtil;
+import com.tom.basecore.utlis.DebugLog;
 import com.tom.basecore.utlis.OSVersionUtils;
 
 import java.util.Comparator;
@@ -45,10 +45,10 @@ public class ThreadPoolManager {
             if (lhs instanceof IPriorityInterface && rhs instanceof IPriorityInterface) {
 
                 int result=((IPriorityInterface) rhs).getPriority()-((IPriorityInterface) lhs).getPriority();
-                LogUtil.d(TAG,"compare result:"+result);
+                DebugLog.d(TAG, "compare result:" + result);
                 return result;
             }
-            LogUtil.d(TAG,"compare:0");
+            DebugLog.d(TAG, "compare:0");
             return 0;
         }
     };

@@ -25,7 +25,8 @@ import android.graphics.drawable.BitmapDrawable;
 import android.util.Log;
 
 import com.tom.basecore.utlis.AppUtils;
-import com.tom.basecore.utlis.LogUtil;
+import com.tom.basecore.utlis.DebugLog;
+import com.tom.basecore.utlis.FileUtils;
 import com.tom.basecore.utlis.OSVersionUtils;
 
 import java.io.File;
@@ -35,8 +36,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.SoftReference;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -75,7 +74,7 @@ public class ImageCache {
 
         // 如果配置参数中指定内存缓存可用，则创建内存缓存
         if (mCacheParams.memoryCacheEnabled) {
-            LogUtil.d(TAG, "Memory cache created (size = " + mCacheParams.memCacheSize + ")");
+            DebugLog.d(TAG, "Memory cache created (size = " + mCacheParams.memCacheSize + ")");
             // If we're running on Honeycomb or newer, then
             if (OSVersionUtils.hasHoneycomb()) {
                 mReusableBitmaps = new HashSet<SoftReference<Bitmap>>();
@@ -124,9 +123,9 @@ public class ImageCache {
                         try {
                             mDiskLruCache = DiskLruCache.open(
                                     diskCacheDir, 1, 1, mCacheParams.diskCacheSize);
-                            LogUtil.d(TAG, "Disk cache initialized");
+                            DebugLog.d(TAG, "Disk cache initialized");
                         } catch (final IOException e) {
-                            LogUtil.e(TAG, "initDiskCache - " + e);
+                            DebugLog.e(TAG, "initDiskCache - " + e);
                         }
                     }
                 }
@@ -159,7 +158,7 @@ public class ImageCache {
         synchronized (mDiskCacheLock) {
             // Add to disk cache
             if (mDiskLruCache != null) {
-                final String key = hashKeyForDisk(data);
+                final String key = FileUtils.hashKeyForDisk(data);
                 OutputStream out = null;
                 try {
                     DiskLruCache.Snapshot snapshot = mDiskLruCache.get(key);
@@ -207,7 +206,7 @@ public class ImageCache {
         }
 
         if (memValue != null) {
-            LogUtil.d(TAG, "Memory cache hit");
+            DebugLog.d(TAG, "Memory cache hit");
         }
 
         return memValue;
@@ -222,7 +221,7 @@ public class ImageCache {
      *          返回一个BitmapDrawable,如果没有拿到则返回Null
      */
     public Bitmap getBitmapFromDiskCache(String data) {
-        final String key = hashKeyForDisk(data);
+        final String key = FileUtils.hashKeyForDisk(data);
         Bitmap bitmap = null;
 
         synchronized (mDiskCacheLock) {
@@ -236,7 +235,7 @@ public class ImageCache {
                 try {
                     final DiskLruCache.Snapshot snapshot = mDiskLruCache.get(key);
                     if (snapshot != null) {
-                            LogUtil.d(TAG, "Disk cache hit");
+                            DebugLog.d(TAG, "Disk cache hit");
                         inputStream = snapshot.getInputStream(DISK_CACHE_INDEX);
                         if (inputStream != null) {
                             FileDescriptor fd = ((FileInputStream) inputStream).getFD();
@@ -300,7 +299,7 @@ public class ImageCache {
     public void clearCache() {
         if (mMemoryCache != null) {
             mMemoryCache.evictAll();
-                LogUtil.d(TAG, "Memory cache cleared");
+                DebugLog.d(TAG, "Memory cache cleared");
         }
 
         synchronized (mDiskCacheLock) {
@@ -308,7 +307,7 @@ public class ImageCache {
             if (mDiskLruCache != null && !mDiskLruCache.isClosed()) {
                 try {
                     mDiskLruCache.delete();
-                        LogUtil.d(TAG, "Disk cache cleared");
+                        DebugLog.d(TAG, "Disk cache cleared");
                 } catch (IOException e) {
                     Log.e(TAG, "clearCache - " + e);
                 }
@@ -326,9 +325,9 @@ public class ImageCache {
             if (mDiskLruCache != null) {
                 try {
                     mDiskLruCache.flush();
-                    LogUtil.d(TAG, "Disk cache flushed");
+                    DebugLog.d(TAG, "Disk cache flushed");
                 } catch (IOException e) {
-                    LogUtil.e(TAG, "flush - " + e);
+                    DebugLog.e(TAG, "flush - " + e);
                 }
             }
         }
@@ -344,10 +343,10 @@ public class ImageCache {
                     if (!mDiskLruCache.isClosed()) {
                         mDiskLruCache.close();
                         mDiskLruCache = null;
-                            LogUtil.d(TAG, "Disk cache closed");
+                            DebugLog.d(TAG, "Disk cache closed");
                     }
                 } catch (IOException e) {
-                    LogUtil.e(TAG, "close - " + e);
+                    DebugLog.e(TAG, "close - " + e);
                 }
             }
         }
@@ -443,7 +442,7 @@ public class ImageCache {
          *          磁盘缓存目录
          */
         public ImageCacheBuilder(Context context, String diskCacheDirectoryName) {
-            diskCacheDir = getDiskCacheDir(context, diskCacheDirectoryName);
+            diskCacheDir = AppUtils.getDiskCacheDir(context, diskCacheDirectoryName);
         }
 
     }
@@ -460,48 +459,6 @@ public class ImageCache {
         int height = targetOptions.outHeight / targetOptions.inSampleSize;
 
         return candidate.getWidth() == width && candidate.getHeight() == height;
-    }
-
-    /**
-     * 拿到一个磁盘目录，如果磁盘已经挂载或者有内置sd卡，则只用内置sd卡，否则使用 Internal cache dir
-     *
-     * @param context The context to use
-     * @param uniqueName A unique directory name to append to the cache dir
-     * @return The cache dir
-     */
-    public static File getDiskCacheDir(Context context, String uniqueName) {
-        final String cachePath= AppUtils.hasExternalStorage() || AppUtils.isExternalStorageRemovable()?
-                AppUtils.getExternalCacheDir(context).getPath():context.getCacheDir().getPath();
-
-        return new File(cachePath + File.separator + uniqueName);
-    }
-
-    /**
-     * 对图片url进行md5编码，作为缓存的key
-     */
-    public static String hashKeyForDisk(String key) {
-        String cacheKey;
-        try {
-            final MessageDigest mDigest = MessageDigest.getInstance("MD5");
-            mDigest.update(key.getBytes());
-            cacheKey = bytesToHexString(mDigest.digest());
-        } catch (NoSuchAlgorithmException e) {
-            cacheKey = String.valueOf(key.hashCode());
-        }
-        return cacheKey;
-    }
-
-    private static String bytesToHexString(byte[] bytes) {
-        // http://stackoverflow.com/questions/332079
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < bytes.length; i++) {
-            String hex = Integer.toHexString(0xFF & bytes[i]);
-            if (hex.length() == 1) {
-                sb.append('0');
-            }
-            sb.append(hex);
-        }
-        return sb.toString();
     }
 
     /**

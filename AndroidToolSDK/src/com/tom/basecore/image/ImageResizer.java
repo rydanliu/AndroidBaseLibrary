@@ -25,7 +25,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.tom.basecore.BuildConfig;
-import com.tom.basecore.utlis.LogUtil;
+import com.tom.basecore.utlis.DebugLog;
 import com.tom.basecore.utlis.OSVersionUtils;
 
 import java.io.FileDescriptor;
@@ -91,7 +91,7 @@ public class ImageResizer extends ImageWorker {
      * @return
      */
     private Bitmap processBitmap(int resId) {
-        LogUtil.d(TAG, "processBitmap - " + resId);
+        DebugLog.d(TAG, "processBitmap - " + resId);
         return decodeSampledBitmapFromResource(mResources, resId, mImageWidth,
                 mImageHeight, getImageCache());
     }
