@@ -32,7 +32,7 @@ public class CacheEntry {
 
     /** 判断是缓存是否过期 */
     public boolean isExpired() {
-        return this.ttl < System.currentTimeMillis()|| this.softTtl<System.currentTimeMillis();
+        return this.ttl < System.currentTimeMillis() && this.softTtl<System.currentTimeMillis();
     }
 
 }

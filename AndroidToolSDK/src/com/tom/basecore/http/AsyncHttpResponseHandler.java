@@ -485,6 +485,7 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
                     if(mRequest!=null && mRequest.shouldCache() && HttpManager.getInstance().isDiskCacheCanUse()){
                         CacheEntry entry= HttpHeaderParser.parseCacheHeaders(response);
                         entry.data=responseBody;
+                        entry.softTtl=System.currentTimeMillis()+mRequest.getCacheTimeOut();
                         HttpManager.getInstance().getHttpDiskCache().put(mRequest.getCacheKey(), entry);
                     }
                 }

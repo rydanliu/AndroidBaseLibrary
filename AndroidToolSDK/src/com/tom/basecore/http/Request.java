@@ -46,6 +46,8 @@ public class Request<T> {
     private final ResponseHandlerInterface mHandler;
     //http请求的标识符，主要用来根据某一个tag进行取消操作
     private String mTag=DEFAULT_TAG;
+    //http请求在客户端设置过期时间
+    private long mCacheTimeout=0;
 
     public Request(Method mMethod, String mUrl,ResponseHandlerInterface mHandler) {
         this.mMethod = mMethod;
@@ -253,6 +255,30 @@ public class Request<T> {
             return FileUtils.hashKeyForDisk(mUrl);
         }
         return "";
+    }
+
+    /**
+     * 设置缓存超时时间
+     * @param timeOut
+     * @return
+     */
+    public Request setCacheTimeOut(long timeOut){
+        if(timeOut>1000){
+            mCacheTimeout=timeOut;
+        }
+        return this;
+    }
+
+    /**
+     * 获取缓存超时时间
+     * @return
+     */
+    public long getCacheTimeOut() {
+        if (mCacheTimeout > 1000) {
+            return mCacheTimeout;
+        } else {
+            return 0;
+        }
     }
 
     /**

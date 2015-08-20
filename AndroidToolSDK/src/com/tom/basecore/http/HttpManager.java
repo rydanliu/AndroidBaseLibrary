@@ -70,10 +70,14 @@ public class HttpManager {
      * @return
      */
     public RequestHandle performRequest(Request<?> mRequest) {
+        return performRequest(mRequest,true);
+    }
+
+    private RequestHandle performRequest(Request<?> mRequest,boolean checkRepet){
         if (mRequest == null) {
             throw new NullPointerException("performRequest:mRequest should not be null!");
         }
-        if (mRequest.shouldCache()) {
+        if (mRequest.shouldCache() && checkRepet) {
             synchronized (mWaitingRequests) {
                 String cacheKey = mRequest.getCacheKey();
                 if (mWaitingRequests.containsKey(cacheKey)) {
@@ -184,7 +188,7 @@ public class HttpManager {
                                 waitingRequests.size(), cacheKey);
                     for(Request item : waitingRequests){
                         if(!item.isCanceled()){
-                            performRequest(mRequest);
+                            performRequest(mRequest,false);
                         }
 
                     }

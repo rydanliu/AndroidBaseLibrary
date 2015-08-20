@@ -127,6 +127,7 @@ public class AsyncHttpRequest extends XRunnable {
                         mRequest.getResponseHandler().sendSuccessMessage(entry.isExpired() ? HttpManager.STATUS_CODE_LOCAL_EXPIRED : HttpManager.STATUS_CODE_LOCAL
                                 , headers, entry.data);
                         if(!entry.isExpired()){
+                            mRequest.getResponseHandler().sendFinishMessage();
                             return;
                         }else {
                             DebugLog.d("yzy", "cache hit but expired!!");
