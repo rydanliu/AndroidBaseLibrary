@@ -1,12 +1,20 @@
 package com.tom.basecore.http;
 
 import android.content.Context;
+import android.text.TextUtils;
 
 import com.tom.basecore.http.cache.DiskBasedCache;
 import com.tom.basecore.utlis.AppUtils;
 import com.tom.basecore.utlis.DebugLog;
 
 import java.io.File;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.WeakHashMap;
 
 /**
  * Description:用于管理所有的http请求
@@ -14,26 +22,35 @@ import java.io.File;
  *     1、默认情况下，所有的http请求使用共同的{@link AsyncHttpClient}对象，除非
  *     在{@link Request}中进行特殊的设置.如设置了重试次数等，具体见{@link Request#isBaseRequest()}
  *     2、如果要启动http缓存功能，那么需要提前调用{@link #initHttpDiskCache(Context)}
- *     3、
  * </pre>
  * User： yuanzeyao.
  * Date： 2015-08-14 16:34
  */
 public class HttpManager {
     public static final String TAG="HttpManager";
+    /**标识 使用没有过期的缓存的状态码 */
     public static final int STATUS_CODE_LOCAL=-1;
+    /**标识 使用过期的缓存的状态码 */
     public static final int STATUS_CODE_LOCAL_EXPIRED=-2;
     private AsyncHttpClient mHttpClient;
+    /**磁盘缓存文件夹*/
     private static final String mCacheDirName="http";
-    //磁盘缓存目录
+    /**磁盘缓存目录*/
     private File mHttpCacheDir;
-    //磁盘缓存
+    /**磁盘缓存*/
     private DiskBasedCache mHttpDiskCache;
-    //磁盘缓存默认大小
+    /**磁盘缓存默认大小*/
     private static final int HTTP_CACHE_SIZE = 10 * 1024 * 1024; // 10MB
-    //磁盘缓存是否已经初始化
+    /**磁盘缓存是否已经初始化*/
     private boolean mHttpDiskCacheInit = false;
-    //单例
+    /**存放当前正在进行的相同的http请求*/
+    private final Map<String, Queue<Request<?>>> mWaitingRequests =
+            new HashMap<String, Queue<Request<?>>>();
+    /**存放没有完成的http请求*/
+    private final Map<String, List<RequestHandle>> requestMap=
+            Collections.synchronizedMap(new WeakHashMap<String, List<RequestHandle>>());
+
+    /**单例实现*/
     private static class SingtonHolder {
         private static HttpManager mInstance=new HttpManager();
     }
@@ -48,25 +65,43 @@ public class HttpManager {
 
     /**
      * 执行http网络请求
+     *
      * @param mRequest
-     * @param mHandler
      * @return
      */
-    public RequestHandle performRequest(Request<?> mRequest, ResponseHandlerInterface mHandler) {
+    public RequestHandle performRequest(Request<?> mRequest) {
         if (mRequest == null) {
             throw new NullPointerException("performRequest:mRequest should not be null!");
         }
-        AsyncHttpClient mClient=getHttpClient(mRequest);
+        if (mRequest.shouldCache()) {
+            synchronized (mWaitingRequests) {
+                String cacheKey = mRequest.getCacheKey();
+                if (mWaitingRequests.containsKey(cacheKey)) {
+                    // There is already a request in flight. Queue up.
+                    Queue<Request<?>> stagedRequests = mWaitingRequests.get(cacheKey);
+                    if (stagedRequests == null) {
+                        stagedRequests = new LinkedList<Request<?>>();
+                    }
+                    stagedRequests.add(mRequest);
+                    mWaitingRequests.put(cacheKey, stagedRequests);
+                    DebugLog.d("Request for cacheKey=%s is in flight, putting on hold.", cacheKey);
+                    return null;
+                } else {
+                    // Insert 'null' queue for this cacheKey, indicating there is now a request in
+                    // flight.
+                    mWaitingRequests.put(cacheKey, null);
+                }
+            }
+        }
+        AsyncHttpClient mClient = getHttpClient(mRequest);
         if (mClient == null) {
             throw new NullPointerException("performRequest:mHttpClient should not be null!");
         }
         mRequest.onPrepareRequest(mClient);
         if (mRequest.getMethod().ordinal() == Request.Method.POST.ordinal()) {
-            return mClient.post(mRequest.getContext(), mRequest.getUrl(), mRequest.getHeaders()
-                    , mRequest.getRequestParams(), mRequest.getContentType(), mHandler);
+            return mClient.post(mRequest);
         } else {
-            return mClient.get(mRequest.getContext(), mRequest.getUrl(), mRequest.getHeaders()
-                    , mRequest.getRequestParams(), mHandler);
+            return mClient.get(mRequest);
         }
     }
 
@@ -133,5 +168,86 @@ public class HttpManager {
                 }
             }
         }.start();
+    }
+
+    /**
+     * 通过制定的{@link Request}已经完成
+     * @param mRequest
+     */
+    public void notifyFinish(Request<?> mRequest){
+        if (mRequest.shouldCache()) {
+            synchronized (mWaitingRequests) {
+                String cacheKey = mRequest.getCacheKey();
+                Queue<Request<?>> waitingRequests = mWaitingRequests.remove(cacheKey);
+                if (waitingRequests != null) {
+                        DebugLog.d(TAG,"Releasing %d waiting requests for cacheKey=%s.",
+                                waitingRequests.size(), cacheKey);
+                    for(Request item : waitingRequests){
+                        if(!item.isCanceled()){
+                            performRequest(mRequest);
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 取消指定列表中的Http请求任务
+     * @param requestList
+     * @param mayInterruptIfRunning
+     */
+    public void cancelRequests(final List<RequestHandle> requestList, final boolean mayInterruptIfRunning) {
+        if (requestList != null) {
+            for (RequestHandle requestHandle : requestList) {
+                requestHandle.cancel(mayInterruptIfRunning);
+            }
+        }
+    }
+
+    /**
+     * 取消当前正在执行或者没有开始执行的http请求任务
+     * @param mayInterruptIfRunning
+     */
+    public void cancelAllRequests(boolean mayInterruptIfRunning) {
+        for (List<RequestHandle> requestList : requestMap.values()) {
+            if (requestList != null) {
+                for (RequestHandle requestHandle : requestList) {
+                    requestHandle.cancel(mayInterruptIfRunning);
+                }
+            }
+        }
+        requestMap.clear();
+        synchronized (mWaitingRequests){
+            mWaitingRequests.clear();
+        }
+    }
+
+    /**
+     * 根据指定的tag，取消正在执行或者没有执行的http请求任务
+     * @param tag
+     * @param mayInterruptIfRunning
+     */
+    public void cancelRequestByTag(String tag, boolean mayInterruptIfRunning) {
+        if (TextUtils.isEmpty(tag)) {
+            return;
+        }
+        List<RequestHandle> requestList = requestMap.get(tag);
+        if (requestList != null) {
+            cancelRequests(requestList, mayInterruptIfRunning);
+        }
+
+        synchronized (mWaitingRequests) {
+            for (Queue<Request<?>> requests : mWaitingRequests.values()) {
+                if (requests != null) {
+                    for (Request request : requests) {
+                        if (request != null && request.getTag().equals(tag)) {
+                            request.cancel();
+                        }
+                    }
+                }
+            }
+        }
     }
 }

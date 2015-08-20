@@ -24,8 +24,6 @@ import android.os.Message;
 
 import com.tom.basecore.http.cache.CacheEntry;
 import com.tom.basecore.http.cache.HttpHeaderParser;
-import com.tom.basecore.utlis.DebugLog;
-import com.tom.basecore.utlis.FileUtils;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -34,10 +32,8 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.HttpResponseException;
 import org.apache.http.util.ByteArrayBuffer;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.net.URI;
 
@@ -106,12 +102,12 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
     private Handler handler;
     private boolean useSynchronousMode;
     private boolean usePoolThread;
-    private boolean mShouldCache = true;
 
     private URI requestURI = null;
     private Header[] requestHeaders = null;
     private Looper looper = null;
     private WeakReference<Object> TAG = new WeakReference<Object>(null);
+    private Request<?> mRequest;
 
     /**
      * Creates a new AsyncHttpResponseHandler
@@ -185,6 +181,16 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
     @Override
     public void setRequestHeaders(Header[] requestHeaders) {
         this.requestHeaders = requestHeaders;
+    }
+
+    @Override
+    public void setRequest(Request<?> mRequest) {
+        this.mRequest=mRequest;
+    }
+
+    @Override
+    public Request<?> getRequest() {
+        return mRequest;
     }
 
     /**
@@ -394,6 +400,7 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
                     break;
                 case FINISH_MESSAGE:
                     onFinish();
+                    HttpManager.getInstance().notifyFinish(mRequest);
                     break;
                 case PROGRESS_MESSAGE:
                     response = (Object[]) message.obj;
@@ -417,6 +424,7 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
                     break;
                 case CANCEL_MESSAGE:
                     onCancel();
+                    HttpManager.getInstance().notifyFinish(mRequest);
                     break;
             }
         } catch (Throwable error) {
@@ -474,15 +482,10 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
                     sendFailureMessage(status.getStatusCode(), response.getAllHeaders(), responseBody, new HttpResponseException(status.getStatusCode(), status.getReasonPhrase()));
                 } else {
                     sendSuccessMessage(status.getStatusCode(), response.getAllHeaders(), responseBody);
-                    DebugLog.d(LOG_TAG, "url:" + getRequestURI().toString() + ":" + HttpManager.getInstance().isDiskCacheCanUse());
-
-                    if(mShouldCache && HttpManager.getInstance().isDiskCacheCanUse()){
-                        DebugLog.d(LOG_TAG, "url:" + getRequestURI().toString());
+                    if(mRequest!=null && mRequest.shouldCache() && HttpManager.getInstance().isDiskCacheCanUse()){
                         CacheEntry entry= HttpHeaderParser.parseCacheHeaders(response);
                         entry.data=responseBody;
-                        String cacheKey= FileUtils.hashKeyForDisk(getRequestURI().toString());
-                        HttpManager.getInstance().getHttpDiskCache().put(cacheKey,entry);
-                        DebugLog.d(LOG_TAG, "save cache success!!");
+                        HttpManager.getInstance().getHttpDiskCache().put(mRequest.getCacheKey(), entry);
                     }
                 }
             }
@@ -532,51 +535,4 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
         return responseBody;
     }
 
-    @Override
-    public void setShouldCache(boolean shouldCache) {
-        mShouldCache=shouldCache;
-    }
-
-    @Override
-    public boolean getShouldCache() {
-        return mShouldCache;
-    }
-
-    private void writeDataToCache(InputStream instream, OutputStream os) {
-        if (instream == null || os == null) {
-            return;
-        }
-        BufferedInputStream bis = null;
-        try {
-            bis = new BufferedInputStream(instream);
-            int len = -1;
-            byte[] buf = new byte[BUFFER_SIZE];
-            while ((len = (bis.read(buf))) != -1) {
-                os.write(buf, 0, len);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            if (bis != null) {
-                try {
-                    bis.close();
-                    bis = null;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (os != null) {
-                try {
-                    os.close();
-                    os = null;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            }
-        }
-
-
-    }
 }

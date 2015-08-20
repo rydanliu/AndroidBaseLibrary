@@ -26,10 +26,10 @@ import java.lang.ref.WeakReference;
  * A Handle to an AsyncRequest which can be used to cancel a running request.
  */
 public class RequestHandle {
-    private final WeakReference<AsyncHttpRequest> request;
+    private final WeakReference<AsyncHttpRequest> httpRequest;
 
-    public RequestHandle(AsyncHttpRequest request) {
-        this.request = new WeakReference<AsyncHttpRequest>(request);
+    public RequestHandle(AsyncHttpRequest httpRequest) {
+        this.httpRequest = new WeakReference<AsyncHttpRequest>(httpRequest);
     }
 
     /**
@@ -49,7 +49,7 @@ public class RequestHandle {
      * completed normally; true otherwise
      */
     public boolean cancel(final boolean mayInterruptIfRunning) {
-        final AsyncHttpRequest _request = request.get();
+        final AsyncHttpRequest _request = httpRequest.get();
         if (_request != null) {
             if (Looper.myLooper() == Looper.getMainLooper()) {
                 new Thread(new Runnable() {
@@ -75,7 +75,7 @@ public class RequestHandle {
      * @return true if this task completed
      */
     public boolean isFinished() {
-        AsyncHttpRequest _request = request.get();
+        AsyncHttpRequest _request = httpRequest.get();
         return _request == null || _request.isDone();
     }
 
@@ -85,37 +85,14 @@ public class RequestHandle {
      * @return true if this task was cancelled before it completed
      */
     public boolean isCancelled() {
-        AsyncHttpRequest _request = request.get();
+        AsyncHttpRequest _request = httpRequest.get();
         return _request == null || _request.isCancelled();
     }
 
     public boolean shouldBeGarbageCollected() {
         boolean should = isCancelled() || isFinished();
         if (should)
-            request.clear();
+            httpRequest.clear();
         return should;
-    }
-
-    /**
-     * Will set Object as TAG to underlying AsyncHttpRequest
-     *
-     * @param tag Object used as TAG to underlying AsyncHttpRequest
-     * @return this RequestHandle to allow fluid syntax
-     */
-    public RequestHandle setTag(Object tag) {
-        AsyncHttpRequest _request = request.get();
-        if (_request != null)
-            _request.setRequestTag(tag);
-        return this;
-    }
-
-    /**
-     * Will return TAG of underlying AsyncHttpRequest if it's not already GCed
-     *
-     * @return Object TAG, can be null
-     */
-    public Object getTag() {
-        AsyncHttpRequest _request = request.get();
-        return _request == null ? null : _request.getTag();
     }
 }

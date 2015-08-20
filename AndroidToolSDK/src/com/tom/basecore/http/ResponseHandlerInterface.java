@@ -187,8 +187,8 @@ public interface ResponseHandlerInterface {
      */
     Object getTag();
 
-    void setShouldCache(boolean shouldCache);
+    void setRequest(Request<?> mRequest);
 
-    boolean getShouldCache();
+    Request<?> getRequest();
 
 }

@@ -21,7 +21,6 @@ package com.tom.basecore.http;
 import com.tom.basecore.http.cache.CacheEntry;
 import com.tom.basecore.thread.XRunnable;
 import com.tom.basecore.utlis.DebugLog;
-import com.tom.basecore.utlis.FileUtils;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -32,8 +31,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HttpContext;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.util.Map;
@@ -46,18 +43,18 @@ public class AsyncHttpRequest extends XRunnable {
     private final AbstractHttpClient client;
     private final HttpContext context;
     private final HttpUriRequest request;
-    private final ResponseHandlerInterface responseHandler;
+    private final Request<?> mRequest;
     private int executionCount;
     private final AtomicBoolean isCancelled = new AtomicBoolean();
     private boolean cancelIsNotified;
     private volatile boolean isFinished;
     private boolean isRequestPreProcessed;
 
-    public AsyncHttpRequest(AbstractHttpClient client, HttpContext context, HttpUriRequest request, ResponseHandlerInterface responseHandler) {
+    public AsyncHttpRequest(AbstractHttpClient client, HttpContext context, HttpUriRequest httpRequest,Request<?> mRequest) {
         this.client = Utils.notNull(client, "client");
         this.context = Utils.notNull(context, "context");
-        this.request = Utils.notNull(request, "request");
-        this.responseHandler = Utils.notNull(responseHandler, "responseHandler");
+        this.request = Utils.notNull(httpRequest, "httpRequest");
+        this.mRequest = Utils.notNull(mRequest, "mRequest");
     }
 
     /**
@@ -106,18 +103,17 @@ public class AsyncHttpRequest extends XRunnable {
             return;
         }
 
-        responseHandler.sendStartMessage();
+        mRequest.getResponseHandler().sendStartMessage();
 
         if (isCancelled()) {
             return;
         }
 
         try {
-            //先从缓存中读取jiu
-            if(responseHandler.getShouldCache()){
-                String cacheKey= FileUtils.hashKeyForDisk(responseHandler.getRequestURI().toString());
+            //先从缓存中读取数据，如果读取不到或者过期，那么进行网络请求
+            if(mRequest.shouldCache()){
                 if(HttpManager.getInstance().isDiskCacheCanUse()){
-                    CacheEntry entry=HttpManager.getInstance().getHttpDiskCache().get(cacheKey);
+                    CacheEntry entry=HttpManager.getInstance().getHttpDiskCache().get(mRequest.getCacheKey());
                     if(entry!=null){
                         DebugLog.d("yzy", "cache hit!");
                         Header[] headers=null;
@@ -128,8 +124,8 @@ public class AsyncHttpRequest extends XRunnable {
                                 headers[i++]=new BasicHeader(item.getKey(),item.getValue());
                             }
                         }
-                        responseHandler.sendSuccessMessage(entry.isExpired()?HttpManager.STATUS_CODE_LOCAL_EXPIRED:HttpManager.STATUS_CODE_LOCAL
-                                ,headers,entry.data);
+                        mRequest.getResponseHandler().sendSuccessMessage(entry.isExpired() ? HttpManager.STATUS_CODE_LOCAL_EXPIRED : HttpManager.STATUS_CODE_LOCAL
+                                , headers, entry.data);
                         if(!entry.isExpired()){
                             return;
                         }else {
@@ -142,7 +138,7 @@ public class AsyncHttpRequest extends XRunnable {
             makeRequestWithRetries();
         } catch (IOException e) {
             if (!isCancelled()) {
-                responseHandler.sendFailureMessage(0, null, null, e);
+                mRequest.getResponseHandler().sendFailureMessage(0, null, null, e);
             } else {
                 AsyncHttpClient.log.e("AsyncHttpRequest", "makeRequestWithRetries returned error", e);
             }
@@ -152,7 +148,7 @@ public class AsyncHttpRequest extends XRunnable {
             return;
         }
 
-        responseHandler.sendFinishMessage();
+        mRequest.getResponseHandler().sendFinishMessage();
 
         if (isCancelled()) {
             return;
@@ -175,8 +171,8 @@ public class AsyncHttpRequest extends XRunnable {
             throw new MalformedURLException("No valid URI scheme was provided");
         }
 
-        if (responseHandler instanceof RangeFileAsyncHttpResponseHandler) {
-            ((RangeFileAsyncHttpResponseHandler) responseHandler).updateRequestHeaders(request);
+        if (mRequest.getResponseHandler() instanceof RangeFileAsyncHttpResponseHandler) {
+            ((RangeFileAsyncHttpResponseHandler) mRequest.getResponseHandler()).updateRequestHeaders(request);
         }
 
         HttpResponse response = client.execute(request, context);
@@ -186,21 +182,21 @@ public class AsyncHttpRequest extends XRunnable {
         }
 
         // Carry out pre-processing for this response.
-        responseHandler.onPreProcessResponse(responseHandler, response);
+        mRequest.getResponseHandler().onPreProcessResponse(mRequest.getResponseHandler(), response);
 
         if (isCancelled()) {
             return;
         }
 
         // The response is ready, handle it.
-        responseHandler.sendResponseMessage(response);
+        mRequest.getResponseHandler().sendResponseMessage(response);
 
         if (isCancelled()) {
             return;
         }
 
         // Carry out post-processing for this response.
-        responseHandler.onPostProcessResponse(responseHandler, response);
+        mRequest.getResponseHandler().onPostProcessResponse(mRequest.getResponseHandler(), response);
     }
 
     private void makeRequestWithRetries() throws IOException {
@@ -233,7 +229,7 @@ public class AsyncHttpRequest extends XRunnable {
                     retry = retryHandler.retryRequest(cause, ++executionCount, context);
                 }
                 if (retry) {
-                    responseHandler.sendRetryMessage(executionCount);
+                    mRequest.getResponseHandler().sendRetryMessage(executionCount);
                 }
             }
         } catch (Exception e) {
@@ -257,7 +253,7 @@ public class AsyncHttpRequest extends XRunnable {
     private synchronized void sendCancelNotification() {
         if (!isFinished && isCancelled.get() && !cancelIsNotified) {
             cancelIsNotified = true;
-            responseHandler.sendCancelMessage();
+            mRequest.getResponseHandler().sendCancelMessage();
         }
     }
 
@@ -271,27 +267,4 @@ public class AsyncHttpRequest extends XRunnable {
         return isCancelled();
     }
 
-    /**
-     * Will set Object as TAG to this request, wrapped by WeakReference
-     *
-     * @param TAG Object used as TAG to this RequestHandle
-     * @return this AsyncHttpRequest to allow fluid syntax
-     */
-    public AsyncHttpRequest setRequestTag(Object TAG) {
-        this.responseHandler.setTag(TAG);
-        return this;
-    }
-
-    /**
-     * Will return TAG of this AsyncHttpRequest
-     *
-     * @return Object TAG, can be null, if it's been already garbage collected
-     */
-    public Object getTag() {
-        return this.responseHandler.getTag();
-    }
-
-    private void writeResultToDiskCache(InputStream is,OutputStream os){
-
-    }
 }

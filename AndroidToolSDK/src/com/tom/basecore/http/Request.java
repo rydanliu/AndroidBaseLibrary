@@ -1,7 +1,8 @@
 package com.tom.basecore.http;
 
-import android.content.Context;
 import android.text.TextUtils;
+
+import com.tom.basecore.utlis.FileUtils;
 
 import org.apache.http.Header;
 
@@ -10,7 +11,8 @@ import org.apache.http.Header;
  * User： yuanzeyao.
  * Date： 2015-08-14 17:23
  */
-public abstract class Request<T> {
+public class Request<T> {
+    public static final String DEFAULT_TAG="DEFAULT_TAG";
 
     //http 请求的方法
     private final Method mMethod;
@@ -40,17 +42,16 @@ public abstract class Request<T> {
     private int mSocketTimeout = AsyncHttpClient.DEFAULT_SOCKET_TIMEOUT;
     //最大的重试次数
     private int maxRetry=AsyncHttpClient.DEFAULT_MAX_RETRIES;
-
-
-    //请求对应的上下文
-    private Context mContext;
+    //任务指定的回调接口
+    private final ResponseHandlerInterface mHandler;
     //http请求的标识符，主要用来根据某一个tag进行取消操作
-    private Object mTag=null;
+    private String mTag=DEFAULT_TAG;
 
-    public Request(Context mContext,Method mMethod, String mUrl) {
-        this.mContext=mContext;
+    public Request(Method mMethod, String mUrl,ResponseHandlerInterface mHandler) {
         this.mMethod = mMethod;
-        this.mUrl = mUrl;
+        this.mUrl=Utils.notNull(mUrl,"mUrl");
+        this.mHandler = Utils.notNull(mHandler, "client");
+        this.mHandler.setRequest(this);
     }
 
     /**
@@ -58,10 +59,6 @@ public abstract class Request<T> {
      */
     public Method getMethod() {
         return mMethod;
-    }
-
-    public Context getContext(){
-        return mContext;
     }
 
     public String getUrl(){
@@ -73,16 +70,18 @@ public abstract class Request<T> {
      *
      * @return
      */
-    public Request<?> setTag(Object tag) {
-        mTag = tag;
+    public Request<?> setTag(String tag) {
+        if(!TextUtils.isEmpty(tag)){
+            mTag = tag;
+        }
         return this;
     }
 
     /**
      * 拿到当前请求的tag，用于根据tag取消http请求
-     * @see Request#setTag(Object)
+     * @see Request#setTag(String)
      */
-    public Object getTag() {
+    public String getTag() {
         return mTag;
     }
 
@@ -96,6 +95,10 @@ public abstract class Request<T> {
         return this;
     }
 
+    /**
+     * 是否需要使用缓存
+     * @return
+     */
     public final boolean shouldCache() {
         return mShouldCache;
     }
@@ -211,14 +214,54 @@ public abstract class Request<T> {
         return this.fixNoHttpResponseException;
     }
 
+    /**
+     * 设置最大重试次数
+     * @param mMaxRetry
+     */
     public void setMaxRetry(int mMaxRetry){
         this.maxRetry=mMaxRetry;
     }
 
+    /**
+     * 获取最大的重试次数
+     * @return
+     */
     public int getMaxRetry(){
         return maxRetry;
     }
 
+    /**
+     * 取消此http请求
+     */
+    public void cancel() {
+        mCanceled = true;
+    }
+
+    /**
+     * 此http请求是否已经取消
+     */
+    public boolean isCanceled() {
+        return mCanceled;
+    }
+
+    /**
+     * 获取http请求的缓存key
+     * @return
+     */
+    public String getCacheKey(){
+        if(!TextUtils.isEmpty(mUrl)){
+            return FileUtils.hashKeyForDisk(mUrl);
+        }
+        return "";
+    }
+
+    /**
+     * 获取任务回调接口
+     * @return
+     */
+    public ResponseHandlerInterface getResponseHandler(){
+        return mHandler;
+    }
 
     /**
      * 为httpClient设置一些配置信息，如用户代理，超时时间
@@ -258,7 +301,7 @@ public abstract class Request<T> {
     /**
      * http 请求的优先级
      */
-    public enum Priority {
+    public static enum Priority {
         LOW,
         NORMAL,
         HIGH,
@@ -268,7 +311,7 @@ public abstract class Request<T> {
     /**
      * 支持的http请求方式
      */
-    public enum Method {
+    public static enum Method {
         GET,
         POST;
     }

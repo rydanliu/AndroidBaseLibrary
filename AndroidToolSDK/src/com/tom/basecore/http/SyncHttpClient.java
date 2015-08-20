@@ -17,8 +17,6 @@
 */
 package com.tom.basecore.http;
 
-import android.content.Context;
-
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -28,7 +26,7 @@ import org.apache.http.protocol.HttpContext;
  * Processes http requests in synchronous mode, so your caller thread will be blocked on each
  * request
  *
- * @see com.loopj.android.http.AsyncHttpClient
+ * @see {@link AsyncHttpClient}
  */
 public class SyncHttpClient extends AsyncHttpClient {
 
@@ -82,7 +80,7 @@ public class SyncHttpClient extends AsyncHttpClient {
     protected RequestHandle sendRequest(DefaultHttpClient client,
                                         HttpContext httpContext, HttpUriRequest uriRequest,
                                         String contentType, ResponseHandlerInterface responseHandler,
-                                        Context context) {
+                                        Request<?> mRequest) {
         if (contentType != null) {
             uriRequest.addHeader(AsyncHttpClient.HEADER_CONTENT_TYPE, contentType);
         }
@@ -92,7 +90,7 @@ public class SyncHttpClient extends AsyncHttpClient {
 		/*
          * will execute the request directly
 		*/
-        newAsyncHttpRequest(client, httpContext, uriRequest, contentType, responseHandler, context).run();
+        newAsyncHttpRequest(client, httpContext, uriRequest, contentType,mRequest).run();
 
         // Return a Request Handle that cannot be used to cancel the request
         // because it is already complete by the time this returns
