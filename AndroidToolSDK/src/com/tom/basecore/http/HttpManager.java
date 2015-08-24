@@ -10,6 +10,7 @@ import com.tom.basecore.utlis.DebugLog;
 import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -69,14 +70,15 @@ public class HttpManager {
      * @param mRequest
      * @return
      */
-    public RequestHandle performRequest(Request<?> mRequest) {
-        return performRequest(mRequest,true);
+    public void performRequest(Request<?> mRequest) {
+         performRequest(mRequest, true);
     }
 
-    private RequestHandle performRequest(Request<?> mRequest,boolean checkRepet){
+    private void performRequest(Request<?> mRequest,boolean checkRepet){
         if (mRequest == null) {
             throw new NullPointerException("performRequest:mRequest should not be null!");
         }
+        DebugLog.d(TAG,"Request key:"+mRequest.getCacheKey());
         if (mRequest.shouldCache() && checkRepet) {
             synchronized (mWaitingRequests) {
                 String cacheKey = mRequest.getCacheKey();
@@ -88,8 +90,8 @@ public class HttpManager {
                     }
                     stagedRequests.add(mRequest);
                     mWaitingRequests.put(cacheKey, stagedRequests);
-                    DebugLog.d("Request for cacheKey=%s is in flight, putting on hold.", cacheKey);
-                    return null;
+                    DebugLog.d(TAG,"Request for cacheKey=%s is in flight, putting on hold.", cacheKey);
+                    return ;
                 } else {
                     // Insert 'null' queue for this cacheKey, indicating there is now a request in
                     // flight.
@@ -102,10 +104,39 @@ public class HttpManager {
             throw new NullPointerException("performRequest:mHttpClient should not be null!");
         }
         mRequest.onPrepareRequest(mClient);
+        RequestHandle mHandler=null;
         if (mRequest.getMethod().ordinal() == Request.Method.POST.ordinal()) {
-            return mClient.post(mRequest);
+            mHandler=mClient.post(mRequest);
         } else {
-            return mClient.get(mRequest);
+            mHandler=mClient.get(mRequest);
+        }
+        updateRequestMap(mRequest,mHandler);
+    }
+
+    /**
+     * 跟新正在进行的http请求列表
+     * @param mRequest
+     * @param mHandler
+     */
+    private void updateRequestMap(Request<?> mRequest, RequestHandle mHandler) {
+        if (mRequest == null || mHandler == null) {
+            return;
+        }
+        List<RequestHandle> requestList;
+        // Add request to request map
+        synchronized (requestMap) {
+            requestList = requestMap.get(mRequest.getTag());
+            if (requestList == null) {
+                requestList = Collections.synchronizedList(new LinkedList<RequestHandle>());
+                requestMap.put(mRequest.getTag(), requestList);
+            }
+        }
+        requestList.add(mHandler);
+        Iterator<RequestHandle> iterator = requestList.iterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().shouldBeGarbageCollected()) {
+                iterator.remove();
+            }
         }
     }
 
@@ -147,6 +178,7 @@ public class HttpManager {
 
     /**
      * 初始化http请求的磁盘缓存
+     * 注意：在某些手机上需要：<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
      * @return
      */
     public void initHttpDiskCache(final Context mContext) {
@@ -154,10 +186,13 @@ public class HttpManager {
             @Override
             public void run() {
                 mHttpCacheDir = AppUtils.getDiskCacheDir(mContext, mCacheDirName);
-                if (!mHttpCacheDir.exists()) {
-                    mHttpCacheDir.mkdirs();
-                }
                 DebugLog.d(TAG, "initHttpDiskCache-->" + mHttpCacheDir.getAbsolutePath());
+                if (!mHttpCacheDir.exists()) {
+                    DebugLog.d(TAG,"mHttpCacheDir is not exist, create it!!");
+                    if(mHttpCacheDir.mkdirs()){
+                        DebugLog.d(TAG,"mHttpCacheDir create Success!!");
+                    }
+                }
                 if (AppUtils.getUsableSpace(mHttpCacheDir) > HTTP_CACHE_SIZE) {
                     try {
                         mHttpDiskCache = new DiskBasedCache(mHttpCacheDir, HTTP_CACHE_SIZE);
@@ -168,7 +203,7 @@ public class HttpManager {
                         mHttpDiskCache = null;
                     }
                 } else {
-                    DebugLog.d(TAG, "initHttpDiskCache-->no space" + AppUtils.getUsableSpace(mHttpCacheDir));
+                    DebugLog.d(TAG, "initHttpDiskCache-->space not enough:" + AppUtils.getUsableSpace(mHttpCacheDir));
                 }
             }
         }.start();
@@ -190,7 +225,6 @@ public class HttpManager {
                         if(!item.isCanceled()){
                             performRequest(mRequest,false);
                         }
-
                     }
                 }
             }

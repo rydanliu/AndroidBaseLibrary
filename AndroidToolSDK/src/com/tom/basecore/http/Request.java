@@ -80,6 +80,18 @@ public class Request<T> {
     }
 
     /**
+     * 设置代理
+     * @param mProxy_ip
+     * @param mProxy_port
+     * @return
+     */
+    public Request<?> setProxy(String mProxy_ip,int mProxy_port){
+        this.mProxy_ip=mProxy_ip;
+        this.mProxy_port=mProxy_port;
+        return this;
+    }
+
+    /**
      * 拿到当前请求的tag，用于根据tag取消http请求
      * @see Request#setTag(String)
      */

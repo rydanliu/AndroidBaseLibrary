@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Internal class, representing the HttpRequest, done in asynchronous manner
  */
 public class AsyncHttpRequest extends XRunnable {
+    public static final String TAG="AsyncHttpRequest";
     private final AbstractHttpClient client;
     private final HttpContext context;
     private final HttpUriRequest request;
@@ -115,7 +116,7 @@ public class AsyncHttpRequest extends XRunnable {
                 if(HttpManager.getInstance().isDiskCacheCanUse()){
                     CacheEntry entry=HttpManager.getInstance().getHttpDiskCache().get(mRequest.getCacheKey());
                     if(entry!=null){
-                        DebugLog.d("yzy", "cache hit!");
+                        DebugLog.d(TAG,"Request has Cache hit! url is %s",mRequest.getUrl());
                         Header[] headers=null;
                         if(entry.responseHeaders!=null && entry.responseHeaders.size()>0){
                             headers=new BasicHeader[entry.responseHeaders.size()];
@@ -130,7 +131,7 @@ public class AsyncHttpRequest extends XRunnable {
                             mRequest.getResponseHandler().sendFinishMessage();
                             return;
                         }else {
-                            DebugLog.d("yzy", "cache hit but expired!!");
+                            DebugLog.d(TAG, "cache hit but expired!!");
                         }
 
                     }

@@ -11,6 +11,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:onClick="onStartTask"
-        android:text="启动一个耗时任务"/>
+        android:text="批量启动Http任务"/>
+
+    <Button
+        android:id="@+id/btn_cancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onCancelTask"
+        android:text="取消所有任务"/>
 
 </LinearLayout>

@@ -24,6 +24,7 @@ import android.os.Message;
 
 import com.tom.basecore.http.cache.CacheEntry;
 import com.tom.basecore.http.cache.HttpHeaderParser;
+import com.tom.basecore.utlis.DebugLog;
 
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -487,6 +488,9 @@ public abstract class AsyncHttpResponseHandler implements ResponseHandlerInterfa
                         entry.data=responseBody;
                         entry.softTtl=System.currentTimeMillis()+mRequest.getCacheTimeOut();
                         HttpManager.getInstance().getHttpDiskCache().put(mRequest.getCacheKey(), entry);
+                        DebugLog.d(LOG_TAG,"sendResponseMessage:save Cache Success!!");
+                    }else{
+                        DebugLog.d(LOG_TAG,"sendResponseMessage:not Cache!!");
                     }
                 }
             }

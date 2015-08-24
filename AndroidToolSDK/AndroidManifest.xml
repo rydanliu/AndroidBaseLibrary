@@ -25,4 +25,6 @@
         </activity>
     </application>
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
+    <!-- 允许程序写入外部存储，如SD卡上写文件/存储缓存文件及下载文件 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 </manifest>
