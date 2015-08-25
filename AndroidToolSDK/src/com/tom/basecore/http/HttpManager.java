@@ -23,6 +23,10 @@ import java.util.WeakHashMap;
  *     1、默认情况下，所有的http请求使用共同的{@link AsyncHttpClient}对象，除非
  *     在{@link Request}中进行特殊的设置.如设置了重试次数等，具体见{@link Request#isBaseRequest()}
  *     2、如果要启动http缓存功能，那么需要提前调用{@link #initHttpDiskCache(Context)}
+ *     3、在进行一次http请求之前，会检查是否有相同的http请求正在进行，如果有则此次http请求直接等待之前的http请求，
+ *     并使用缓存的结果
+ *     4、取消http请求使用{@link #cancelAllRequests(boolean)} or {@link #cancelRequestByTag(String, boolean)}
+ *     or{@link #cancelRequests(List, boolean)}
  * </pre>
  * User： yuanzeyao.
  * Date： 2015-08-14 16:34
@@ -225,6 +229,8 @@ public class HttpManager {
                         if(!item.isCanceled()){
                             DebugLog.d(TAG,"notifyFinish->performRequest");
                             performRequest(mRequest, false);
+                        }else {
+                            DebugLog.d(TAG,"notifyFinish->not perfromRequest!");
                         }
                     }
                 }
