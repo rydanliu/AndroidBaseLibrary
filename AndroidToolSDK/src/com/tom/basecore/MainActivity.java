@@ -97,7 +97,6 @@ public class MainActivity extends Activity {
   }
 
   public void onCancelTask(View view){
-    DebugLog.log("yzy","onCancelTask!!!");
     HttpManager.getInstance().cancelRequestByTag(Request.DEFAULT_TAG,true);
   }
 }

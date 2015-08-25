@@ -223,7 +223,8 @@ public class HttpManager {
                                 waitingRequests.size(), cacheKey);
                     for(Request item : waitingRequests){
                         if(!item.isCanceled()){
-                            performRequest(mRequest,false);
+                            DebugLog.d(TAG,"notifyFinish->performRequest");
+                            performRequest(mRequest, false);
                         }
                     }
                 }
@@ -257,8 +258,15 @@ public class HttpManager {
             }
         }
         requestMap.clear();
-        synchronized (mWaitingRequests){
-            mWaitingRequests.clear();
+        for (Queue<Request<?>> requests : mWaitingRequests.values()) {
+            if (requests != null) {
+                for (Request request : requests) {
+                    if (request != null) {
+                        request.cancel();
+                        DebugLog.d(TAG, "request.cancel");
+                    }
+                }
+            }
         }
     }
 
@@ -275,14 +283,12 @@ public class HttpManager {
         if (requestList != null) {
             cancelRequests(requestList, mayInterruptIfRunning);
         }
-
-        synchronized (mWaitingRequests) {
-            for (Queue<Request<?>> requests : mWaitingRequests.values()) {
-                if (requests != null) {
-                    for (Request request : requests) {
-                        if (request != null && request.getTag().equals(tag)) {
-                            request.cancel();
-                        }
+        for (Queue<Request<?>> requests : mWaitingRequests.values()) {
+            if (requests != null) {
+                for (Request request : requests) {
+                    if (request != null && request.getTag().equals(tag)) {
+                        request.cancel();
+                        DebugLog.d(TAG, "request.cancel");
                     }
                 }
             }

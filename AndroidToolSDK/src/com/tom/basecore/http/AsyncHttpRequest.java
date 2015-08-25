@@ -125,6 +125,9 @@ public class AsyncHttpRequest extends XRunnable {
                                 headers[i++]=new BasicHeader(item.getKey(),item.getValue());
                             }
                         }
+                        if(isCancelled()){
+                            return;
+                        }
                         mRequest.getResponseHandler().sendSuccessMessage(entry.isExpired() ? HttpManager.STATUS_CODE_LOCAL_EXPIRED : HttpManager.STATUS_CODE_LOCAL
                                 , headers, entry.data);
                         if(!entry.isExpired()){
@@ -176,7 +179,6 @@ public class AsyncHttpRequest extends XRunnable {
         if (mRequest.getResponseHandler() instanceof RangeFileAsyncHttpResponseHandler) {
             ((RangeFileAsyncHttpResponseHandler) mRequest.getResponseHandler()).updateRequestHeaders(request);
         }
-
         HttpResponse response = client.execute(request, context);
 
         if (isCancelled()) {
@@ -246,10 +248,10 @@ public class AsyncHttpRequest extends XRunnable {
 
     public boolean isCancelled() {
         boolean cancelled = isCancelled.get();
-        if (cancelled) {
+        if (cancelled || mRequest.isCanceled()) {
             sendCancelNotification();
         }
-        return cancelled;
+        return cancelled||mRequest.isCanceled();
     }
 
     private synchronized void sendCancelNotification() {
@@ -266,6 +268,7 @@ public class AsyncHttpRequest extends XRunnable {
     public boolean cancel(boolean mayInterruptIfRunning) {
         isCancelled.set(true);
         request.abort();
+        mRequest.cancel();
         return isCancelled();
     }
 
