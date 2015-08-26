@@ -37,6 +37,7 @@ public class HttpManager {
     public static final int STATUS_CODE_LOCAL=-1;
     /**标识 使用过期的缓存的状态码 */
     public static final int STATUS_CODE_LOCAL_EXPIRED=-2;
+    /**默认的AsyncHttpClient对象*/
     private AsyncHttpClient mHttpClient;
     /**磁盘缓存文件夹*/
     private static final String mCacheDirName="http";
@@ -48,10 +49,10 @@ public class HttpManager {
     private static final int HTTP_CACHE_SIZE = 10 * 1024 * 1024; // 10MB
     /**磁盘缓存是否已经初始化*/
     private boolean mHttpDiskCacheInit = false;
-    /**存放当前正在进行的相同的http请求*/
+    /**存放当前正在进行的相同的http请求，key是Request的cacheKey*/
     private final Map<String, Queue<Request<?>>> mWaitingRequests =
             new HashMap<String, Queue<Request<?>>>();
-    /**存放没有完成的http请求*/
+    /**存放没有完成的http请求，key 是每个Request的tag*/
     private final Map<String, List<RequestHandle>> requestMap=
             Collections.synchronizedMap(new WeakHashMap<String, List<RequestHandle>>());
 
@@ -78,6 +79,12 @@ public class HttpManager {
          performRequest(mRequest, true);
     }
 
+    /**
+     * 执行http网络请求
+     * @param mRequest
+     * @param checkRepet
+     *          是否检查有相同的http请求正在进行
+     */
     private void performRequest(Request<?> mRequest,boolean checkRepet){
         if (mRequest == null) {
             throw new NullPointerException("performRequest:mRequest should not be null!");
@@ -136,6 +143,7 @@ public class HttpManager {
             }
         }
         requestList.add(mHandler);
+        //清除已经完成的http请求
         Iterator<RequestHandle> iterator = requestList.iterator();
         while (iterator.hasNext()) {
             if (iterator.next().shouldBeGarbageCollected()) {
@@ -172,10 +180,18 @@ public class HttpManager {
         return mClient;
     }
 
+    /**
+     * 获取磁盘缓存对象
+     * @return
+     */
     public DiskBasedCache getHttpDiskCache(){
         return mHttpDiskCache;
     }
 
+    /**
+     * 判断磁盘缓存是否已经初始化
+     * @return
+     */
     public boolean isDiskCacheCanUse(){
         return mHttpDiskCache!=null && mHttpDiskCacheInit;
     }

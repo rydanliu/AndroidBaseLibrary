@@ -179,11 +179,6 @@ public class AsyncHttpRequest extends XRunnable {
         if (mRequest.getResponseHandler() instanceof RangeFileAsyncHttpResponseHandler) {
             ((RangeFileAsyncHttpResponseHandler) mRequest.getResponseHandler()).updateRequestHeaders(request);
         }
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         HttpResponse response = client.execute(request, context);
 
         if (isCancelled()) {

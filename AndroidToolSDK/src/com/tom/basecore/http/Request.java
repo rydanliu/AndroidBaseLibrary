@@ -12,8 +12,8 @@ import org.apache.http.Header;
  * Date： 2015-08-14 17:23
  */
 public class Request<T> {
+    //默认的TAG,主要用于取消http请求
     public static final String DEFAULT_TAG="DEFAULT_TAG";
-
     //http 请求的方法
     private final Method mMethod;
     //http 请求的url
@@ -63,13 +63,16 @@ public class Request<T> {
         return mMethod;
     }
 
+    /**
+     * 拿到http请求的url
+     * @return
+     */
     public String getUrl(){
         return mUrl;
     }
 
     /**
-     * 为改请求设置一个tag，当需要根据某一个tag取消http请求时会用到
-     *
+     * 为该请求设置一个tag，当需要根据某一个tag取消http请求时会用到
      * @return
      */
     public Request<?> setTag(String tag) {
@@ -121,8 +124,9 @@ public class Request<T> {
      * 设置请求需要使用的参数
      * @param mParams
      */
-    public void setRequestParams(RequestParams mParams){
+    public Request<T> setRequestParams(RequestParams mParams){
         this.mParams=mParams;
+        return this;
     }
 
     /**
@@ -138,8 +142,9 @@ public class Request<T> {
      * 设置本次请求需要添加的头信息
      * @param mHeaders
      */
-    public void setHeaders(Header[] mHeaders){
+    public Request<T> setHeaders(Header[] mHeaders){
         this.mHeaders=mHeaders;
+        return this;
     }
     /**
      * 返回该http请求需要携带的头信息，默认是null,如果某个http请求需要携带
@@ -164,16 +169,18 @@ public class Request<T> {
      * @param mPriority
      * @see {@link com.tom.basecore.http.Request.Priority}
      */
-    public void setPriority(Priority mPriority){
+    public Request<T> setPriority(Priority mPriority){
         this.mPriority=mPriority;
+        return this;
     }
 
     /**
      * 设置连接超时时间
      * @param mTimeOut
      */
-    public void setConnectionTimeout(int mTimeOut){
+    public Request<T> setConnectionTimeout(int mTimeOut){
         this.mConnectionTimeout=mTimeOut;
+        return this;
     }
 
     /**
@@ -188,8 +195,9 @@ public class Request<T> {
      * 设置响应超时时间/Socket超时时间
      * @param mTimeOut
      */
-    public void setSocketTimeout(int mTimeOut){
+    public Request<T> setSocketTimeout(int mTimeOut){
         this.mSocketTimeout=mTimeOut;
+        return this;
     }
 
     /**
@@ -204,8 +212,9 @@ public class Request<T> {
      * 设置用户代理
      * @param mUserAgent
      */
-    public void setUserAgent(String mUserAgent){
+    public Request<T> setUserAgent(String mUserAgent){
         this.mUserAgent=mUserAgent;
+        return this;
     }
 
     public String getContentType() {
@@ -216,8 +225,9 @@ public class Request<T> {
      * 设置是否修正无响应错误
      * @param fixNoHttpResponseException
      */
-    public void setFixNoHttpResponseException(boolean fixNoHttpResponseException){
+    public Request<T> setFixNoHttpResponseException(boolean fixNoHttpResponseException){
         this.fixNoHttpResponseException=fixNoHttpResponseException;
+        return this;
     }
 
     /**
@@ -232,8 +242,9 @@ public class Request<T> {
      * 设置最大重试次数
      * @param mMaxRetry
      */
-    public void setMaxRetry(int mMaxRetry){
+    public Request<T> setMaxRetry(int mMaxRetry){
         this.maxRetry=mMaxRetry;
+        return this;
     }
 
     /**

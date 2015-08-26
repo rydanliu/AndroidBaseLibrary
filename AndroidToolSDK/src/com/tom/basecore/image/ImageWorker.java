@@ -70,6 +70,16 @@ public abstract class ImageWorker {
      *          需要展示图片的ImageView
      */
     public void loadImage(Object data, ImageView imageView) {
+        loadImage(data,mLoadingBitmap,imageView);
+    }
+
+    /**
+     * 加载网络图片，并指定图片还未加载完成时，默认显示的图片
+     * @param data
+     * @param mDefaultBitmap
+     * @param imageView
+     */
+    public void loadImage(Object data,Bitmap mDefaultBitmap,ImageView imageView){
         if (data == null) {
             return;
         }
@@ -86,11 +96,12 @@ public abstract class ImageWorker {
         } else if (cancelPotentialWork(data, imageView)) {
             final BitmapWorkerTask task = new BitmapWorkerTask(imageView);
             final AsyncDrawable asyncDrawable =
-                    new AsyncDrawable(mResources, mLoadingBitmap, task);
+                    new AsyncDrawable(mResources, mDefaultBitmap, task);
             imageView.setImageDrawable(asyncDrawable);
             task.executeOnExecutor(mExecutor, data);
         }
     }
+
 
     /**
      * 设置在加载图片的过程中的默认图片
