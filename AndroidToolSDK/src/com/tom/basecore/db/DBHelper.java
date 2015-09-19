@@ -10,20 +10,14 @@ import android.database.sqlite.SQLiteOpenHelper;
  * Date£º 2015-09-02 18:39
  */
 public class DBHelper extends SQLiteOpenHelper {
-
-    private Class<?>[] tableClass;
-    private static final int DB_VERSION=1;
-
-    private static final String DB_NAME="android.db";
-
+    public static final String TAG="DBHelper";
     public DBHelper(Context mContext,Class<?>[] tableClass){
-        super(mContext,DB_NAME,null,DB_VERSION);
-        this.tableClass=tableClass;
-
+        super(mContext,DBConfig.DB_ONE_NAME,null,DBConfig.DB_ONE_VERSION);
     }
+
     @Override
     public void onCreate(SQLiteDatabase db) {
-        TableHelper.createTableByClasses(db,tableClass);
+        TableHelper.createTableByClasses(db,DBConfig.TABLES_ONE);
     }
 
     @Override
